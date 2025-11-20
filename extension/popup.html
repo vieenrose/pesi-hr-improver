@@ -76,6 +76,63 @@
       height: 16px;
       margin-bottom: 5px;
     }
+    .notification-card {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      display: none; /* Hidden by default */
+    }
+    .notification-header {
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .notification-list {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 12px;
+    }
+    .notification-list li {
+      margin-bottom: 2px;
+    }
+    .refresh-hint {
+      font-size: 10px;
+      color: #6c757d;
+      text-align: right;
+      margin-top: 5px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 5px;
+    }
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: #007bff;
+      cursor: pointer;
+      padding: 0;
+      font-size: 10px;
+      text-decoration: underline;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 50%;
+      border-top-color: #007bff;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 5px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -84,6 +141,20 @@
     PESI HR Helper
   </h1>
   
+  <div id="notification-area" class="notification-card">
+    <div class="notification-header">
+      <span>⚠️ 考勤異常通知</span>
+      <span id="abnormal-count" style="background: #dc3545; color: white; padding: 1px 6px; border-radius: 10px; font-size: 11px;">0</span>
+    </div>
+    <ul id="abnormal-list" class="notification-list">
+      <!-- Items will be injected here -->
+    </ul>
+    <div class="refresh-hint">
+      <span id="last-updated"></span>
+      <button id="refresh-notification-btn" class="refresh-btn">🔄 重新掃描</button>
+    </div>
+  </div>
+
   <div class="card">
     <label for="username">員工代號 (User ID)</label>
     <input type="text" id="username" placeholder="ex: A123">

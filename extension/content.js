@@ -53,7 +53,79 @@ function checkAndEnhanceForms() {
     } else if (isTripUrl || isTripText) {
         enhanceBusinessTripApplication();
     }
+    
+    // Always check for attendance abnormalities on any page (background check)
+    // This ensures we catch it whenever the user visits the dashboard or attendance page
+    setTimeout(checkAttendanceAbnormalities, 1500);
 }
+
+function checkAttendanceAbnormalities() {
+    console.log("PESI: Checking for attendance abnormalities...");
+    
+    const tables = document.querySelectorAll('table');
+    let foundIssues = [];
+
+    tables.forEach(table => {
+        const headerText = table.innerText;
+        // Relaxed check: just look for Date and Status/Abnormal/Swipe
+        if (headerText.includes('日期') && (headerText.includes('異常') || headerText.includes('狀態') || headerText.includes('刷卡'))) {
+            console.log("PESI: Found potential attendance table.");
+            
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const text = row.innerText.trim();
+                // Skip header
+                if (text.includes('日期')) return;
+
+                // Check for specific keywords
+                const keywords = ['遲到', '早退', '曠職', '未刷卡', '異常'];
+                const hasIssue = keywords.some(k => text.includes(k));
+                
+                if (hasIssue) {
+                    // Extract Date
+                    const dateMatch = text.match(/\d{4}\/\d{2}\/\d{2}/) || text.match(/\d{2}\/\d{2}/);
+                    // Extract Reason
+                    const reasonMatch = text.match(/(遲到|早退|曠職|未刷卡|異常)/);
+                    
+                    if (dateMatch && reasonMatch) {
+                        foundIssues.push(`${dateMatch[0]} ${reasonMatch[0]}`);
+                    }
+                }
+            });
+        }
+    });
+
+    // Remove duplicates
+    foundIssues = [...new Set(foundIssues)];
+
+    if (foundIssues.length > 0) {
+        console.log("PESI: Issues found:", foundIssues);
+        chrome.storage.local.set({
+            'pesi_notifications': {
+                count: foundIssues.length,
+                items: foundIssues.slice(0, 5),
+                lastUpdated: Date.now()
+            }
+        });
+    } else {
+        console.log("PESI: No issues found on this page.");
+        // Only clear if we are explicitly on an attendance page (heuristic)
+        const bodyText = document.body.innerText;
+        if (bodyText.includes('考勤') || bodyText.includes('Attendance')) {
+             // Don't clear immediately, maybe just don't update? 
+             // Or clear if we are sure. Let's keep old data if we are not sure.
+        }
+    }
+}
+
+// Listen for messages from Popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "scan_attendance") {
+        console.log("PESI HR Improver: Manual scan requested by popup.");
+        checkAttendanceAbnormalities();
+        sendResponse({ success: true });
+    }
+});
 
 function attemptAutoLogin() {
     let attempts = 0;
