@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const abnormalCount = document.getElementById('abnormal-count');
   const abnormalList = document.getElementById('abnormal-list');
   const lastUpdated = document.getElementById('last-updated');
+  const aboutLink = document.getElementById('about-link');
 
   // Display Notifications Function
   function updateNotificationUI(data) {
@@ -208,4 +209,13 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   });
+  
+  // About link opens repository in a new tab
+  if (aboutLink) {
+    aboutLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      const repoUrl = 'https://github.com/vieenrose/pesi-hr-improver';
+      chrome.tabs.create({ url: repoUrl });
+    });
+  }
 });
