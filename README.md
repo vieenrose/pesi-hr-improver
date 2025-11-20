@@ -68,52 +68,6 @@
 
 ---
 
-### A. Leave Status Banner
-Provides a real-time summary of the employee's Annual Leave (特休):
-*   **Previous Year Remainder**: Days carried over.
-*   **Current Year New**: Newly accrued days.
-*   **Validity Period**: The effective date range for the current quota (e.g., `114/01/01~114/12/31`).
-*   **Calculation**: `(Previous + New) - Used = Remaining`.
+## 關於 Pesi HR 系統 (System Context)
+本擴充功能是針對 **百一電子 (Pesi Electronics)** 的內部 HR 系統 (`https://hr.pesi.com.tw/HtmlWorkFlow/Index.html`) 所開發。該系統是一個單頁應用程式 (SPA)，本擴充功能透過 DOM 操作來增強其介面與功能。
 
-### B. Quick Actions
-Shortcut links to frequently used functions, bypassing the menu tree:
-*   Overtime Apply/Query
-*   Leave Apply/Query
-*   Missed Clock-in Apply
-*   Payslip View
-
-### C. Anomaly Resolution (考勤異常通知)
-An intelligent workflow feature that automatically flags discrepancies between **Clock Data** (actual punches) and **Approved Forms**.
-
-*   **Detection**: Identifies issues such as:
-    *   `加班單時數小於卡鐘時數`: Worked hours exceed approved overtime.
-    *   `缺勤時數大於請假單`: Absence duration exceeds approved leave.
-    *   `有缺勤時數無請假單時數`: Absence detected with no corresponding leave request.
-*   **Resolution Workflow**:
-    *   Displays a table of issues by Date and Employee.
-    *   **Actionable Links**: Each issue contains a "Filter Condition" link.
-    *   **Smart Pre-filling**: Clicking the link triggers `setSelectedFormCloseNav`, opening the specific form required to fix the issue and pre-filling it with the exact **Date**, **Time**, and **Employee ID**.
-
-## Technical Details
-*   **Navigation Logic**: Relies heavily on inline JavaScript functions like `setMenuUL_Visible('ID')` to toggle menu visibility.
-*   **Data Formats**:
-    *   **Dates**: Passed as Excel serial date numbers (e.g., `45978` for Nov 2025).
-    *   **Time**: Passed as fractional days (e.g., `0.33333` for 08:00 AM) for precise calculations.
-*   **Form Integration**: The anomaly resolution links pass complex objects directly to the form opening function to ensure context is preserved.
-
-## Chrome Extension: Pesi HR UI/UX Improver
-
-A Chrome Extension project has been started to improve the UI/UX of the Leave and Business Trip application forms.
-
-### Installation
-1.  Open Chrome and navigate to `chrome://extensions/`.
-2.  Enable **Developer mode** in the top right corner.
-3.  Click **Load unpacked**.
-4.  Select the `extension` folder in this project (`/home/luigi/dayoff/extension`).
-
-### Features (Milestone 1)
-*   **Target Pages**: Leave Application (`SW0029`) and Business Trip Application (`SW0210`).
-*   **Enhancements**:
-    *   Injects modern CSS variables and styling.
-    *   Detects when the target forms are loaded.
-    *   Applies a cleaner, card-based layout to forms.
