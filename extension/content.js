@@ -59,39 +59,68 @@ function checkAndEnhanceForms() {
     setTimeout(checkAttendanceAbnormalities, 1500);
 }
 
-function checkAttendanceAbnormalities() {
-    console.log("PESI: Checking for attendance abnormalities...");
+function checkAttendanceAbnormalities(isManual = false) {
+    console.log(`PESI: Checking for attendance abnormalities (Deep Scan, Manual: ${isManual})...`);
     
-    const tables = document.querySelectorAll('table');
     let foundIssues = [];
+    // Added '缺勤' (Absence) and '加班' (Overtime warning) based on user feedback
+    const keywords = ['遲到', '早退', '曠職', '未刷卡', '異常', '缺勤', '加班'];
+    
+    // Select all rows in the document
+    // Use 'tr' and also check for 'div' that might look like a row (common in modern frameworks, though this is ASP.NET)
+    const rows = document.querySelectorAll('tr');
+    console.log(`PESI: Found ${rows.length} rows in frame: ${window.location.href}`);
 
-    tables.forEach(table => {
-        const headerText = table.innerText;
-        // Relaxed check: just look for Date and Status/Abnormal/Swipe
-        if (headerText.includes('日期') && (headerText.includes('異常') || headerText.includes('狀態') || headerText.includes('刷卡'))) {
-            console.log("PESI: Found potential attendance table.");
+    rows.forEach(row => {
+        // Use textContent as fallback for innerText (sometimes innerText is empty for hidden elements)
+        const text = (row.innerText || row.textContent).trim();
+        
+        // Debug: Log rows that look like they might be relevant
+        if (text.includes('2025') || text.includes('2024')) {
+             // console.log("PESI: Found row with year:", text);
+        }
+
+        // Check if row contains any keyword
+        const hasIssue = keywords.some(k => text.includes(k));
+        
+        if (hasIssue) {
+            // Support YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD, MM/DD, and ROC years (e.g. 112/01/01)
+            // Relaxed regex to allow spaces
+            const dateMatch = text.match(/\d{3,4}\s*[\/\-\.]\s*\d{2}\s*[\/\-\.]\s*\d{2}/) || text.match(/\d{2}\s*[\/\-\.]\s*\d{2}/);
             
-            const rows = table.querySelectorAll('tr');
-            rows.forEach(row => {
-                const text = row.innerText.trim();
-                // Skip header
-                if (text.includes('日期')) return;
+            if (dateMatch) {
+                // Found a date and a keyword!
+                console.log("PESI: Match found!", text);
 
-                // Check for specific keywords
-                const keywords = ['遲到', '早退', '曠職', '未刷卡', '異常'];
-                const hasIssue = keywords.some(k => text.includes(k));
-                
-                if (hasIssue) {
-                    // Extract Date
-                    const dateMatch = text.match(/\d{4}\/\d{2}\/\d{2}/) || text.match(/\d{2}\/\d{2}/);
-                    // Extract Reason
-                    const reasonMatch = text.match(/(遲到|早退|曠職|未刷卡|異常)/);
-                    
-                    if (dateMatch && reasonMatch) {
-                        foundIssues.push(`${dateMatch[0]} ${reasonMatch[0]}`);
+                // Improved extraction: Try to find the cell containing the keyword
+                let reasonText = '';
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    const cellText = cell.innerText.trim();
+                    if (keywords.some(k => cellText.includes(k))) {
+                        reasonText = cellText;
                     }
+                });
+
+                // Fallback if no cell match (unlikely)
+                if (!reasonText) {
+                     const match = text.match(new RegExp(`(${keywords.join('|')})`));
+                     if (match) reasonText = match[0];
                 }
-            });
+
+                if (reasonText) {
+                    // Clean up reason text (remove newlines, extra spaces)
+                    reasonText = reasonText.replace(/\s+/g, ' ').trim();
+                    // Truncate if too long
+                    if (reasonText.length > 25) reasonText = reasonText.substring(0, 25) + '...';
+                    
+                    // Clean up date (remove spaces)
+                    const dateStr = dateMatch[0].replace(/\s/g, '');
+                    
+                    const issue = `${dateStr} ${reasonText}`;
+                    foundIssues.push(issue);
+                }
+            }
         }
     });
 
@@ -99,7 +128,7 @@ function checkAttendanceAbnormalities() {
     foundIssues = [...new Set(foundIssues)];
 
     if (foundIssues.length > 0) {
-        console.log("PESI: Issues found:", foundIssues);
+        console.log("PESI: Total unique issues found:", foundIssues.length);
         chrome.storage.local.set({
             'pesi_notifications': {
                 count: foundIssues.length,
@@ -108,23 +137,26 @@ function checkAttendanceAbnormalities() {
             }
         });
     } else {
-        console.log("PESI: No issues found on this page.");
-        // Only clear if we are explicitly on an attendance page (heuristic)
-        const bodyText = document.body.innerText;
-        if (bodyText.includes('考勤') || bodyText.includes('Attendance')) {
-             // Don't clear immediately, maybe just don't update? 
-             // Or clear if we are sure. Let's keep old data if we are not sure.
-        }
+        console.log("PESI: No issues found in this frame.");
+        // Do NOT clear storage here. 
+        // The popup clears it before scanning.
+        // If we clear it here, we might overwrite results from another frame.
     }
 }
 
 // Listen for messages from Popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "scan_attendance") {
-        console.log("PESI HR Improver: Manual scan requested by popup.");
-        checkAttendanceAbnormalities();
+        console.log("PESI HR Improver: Manual scan requested by popup (via message).");
+        checkAttendanceAbnormalities(true);
         sendResponse({ success: true });
     }
+});
+
+// Listen for Custom Event (triggered by executeScript in all frames)
+document.addEventListener('pesi_manual_scan', function() {
+    console.log("PESI HR Improver: Manual scan requested by popup (via Event).");
+    checkAttendanceAbnormalities(true);
 });
 
 function attemptAutoLogin() {

@@ -45,31 +45,105 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalText = lastUpdated.textContent;
         lastUpdated.innerHTML = '正在更新... <div class="loading-spinner"></div>';
         
-        // Send message to content script
-        chrome.tabs.sendMessage(tabs[0].id, {action: "scan_attendance"}, function(response) {
-          if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError);
-            lastUpdated.textContent = "掃描失敗 (請重新整理網頁)";
+        // Check if scripting API is available
+        if (!chrome.scripting) {
+            console.error("PESI: chrome.scripting API not available. Reload extension.");
+            lastUpdated.textContent = "請重新載入擴充功能";
             return;
-          }
+        }
 
-          if (response && response.success) {
-            // Reload from storage to get the fresh data
-            setTimeout(() => {
-              chrome.storage.local.get(['pesi_notifications'], function(newResult) {
-                updateNotificationUI(newResult.pesi_notifications);
-                if (!newResult.pesi_notifications || newResult.pesi_notifications.count === 0) {
-                   // If nothing found after manual scan, show "No issues"
-                   notificationArea.style.display = 'block'; 
-                   abnormalCount.textContent = '0';
-                   abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
-                   lastUpdated.textContent = `更新於: ${new Date().toLocaleString()}`;
+        // Execute script in ALL frames and COLLECT results directly
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id, allFrames: true },
+            func: function() {
+                // --- INJECTED SCRAPER LOGIC START ---
+                var foundIssues = [];
+                var keywords = ['遲到', '早退', '曠職', '未刷卡', '異常', '缺勤', '加班'];
+                
+                try {
+                    var rows = document.querySelectorAll('tr');
+                    rows.forEach(function(row) {
+                        var text = (row.innerText || row.textContent || "").trim();
+                        
+                        // Check keywords
+                        var hasIssue = false;
+                        for (var i = 0; i < keywords.length; i++) {
+                            if (text.includes(keywords[i])) {
+                                hasIssue = true;
+                                break;
+                            }
+                        }
+                        
+                        if (hasIssue) {
+                            // Check date (Relaxed regex)
+                            var dateMatch = text.match(/\d{3,4}\s*[\/\-\.]\s*\d{2}\s*[\/\-\.]\s*\d{2}/) || text.match(/\d{2}\s*[\/\-\.]\s*\d{2}/);
+                            
+                            if (dateMatch) {
+                                // Extract reason
+                                var reasonText = '';
+                                var cells = row.querySelectorAll('td');
+                                cells.forEach(function(cell) {
+                                    var cellText = (cell.innerText || cell.textContent || "").trim();
+                                    for (var j = 0; j < keywords.length; j++) {
+                                        if (cellText.includes(keywords[j])) {
+                                            reasonText = cellText;
+                                            break;
+                                        }
+                                    }
+                                });
+
+                                if (!reasonText) {
+                                     var match = text.match(new RegExp('(' + keywords.join('|') + ')'));
+                                     if (match) reasonText = match[0];
+                                }
+
+                                if (reasonText) {
+                                    reasonText = reasonText.replace(/\s+/g, ' ').trim();
+                                    if (reasonText.length > 25) reasonText = reasonText.substring(0, 25) + '...';
+                                    var dateStr = dateMatch[0].replace(/\s/g, '');
+                                    foundIssues.push(dateStr + ' ' + reasonText);
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error("PESI Scraper Error:", e);
                 }
-              });
-            }, 500); // Wait for storage write
-          } else {
-            lastUpdated.textContent = originalText;
-          }
+                return foundIssues;
+                // --- INJECTED SCRAPER LOGIC END ---
+            }
+        }, function(results) {
+            // Process results from ALL frames
+            var allIssues = [];
+            if (results && results.length > 0) {
+                results.forEach(function(frameResult) {
+                    if (frameResult.result && Array.isArray(frameResult.result)) {
+                        allIssues = allIssues.concat(frameResult.result);
+                    }
+                });
+            }
+
+            // Deduplicate
+            allIssues = [...new Set(allIssues)];
+
+            // Update UI
+            var data = {
+                count: allIssues.length,
+                items: allIssues.slice(0, 5),
+                lastUpdated: Date.now()
+            };
+            
+            updateNotificationUI(data);
+            
+            if (allIssues.length === 0) {
+                notificationArea.style.display = 'block'; 
+                abnormalCount.textContent = '0';
+                abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
+                lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
+            }
+
+            // Save to storage
+            chrome.storage.local.set({ 'pesi_notifications': data });
         });
       }
     });

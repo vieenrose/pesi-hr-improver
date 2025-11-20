@@ -14,7 +14,7 @@
 
 ## 📸 實際畫面 (Screenshots)
 
-| 快速登入 (Quick Login) | 請假申請 (Leave Application) | 公出申請 (Business Trip) |
+| 快速登入與異常通知 (Login & Alerts) | 請假申請 (Leave Application) | 公出申請 (Business Trip) |
 |:---:|:---:|:---:|
 | <img src="extension/screenshots/popup_panel.png" width="250"> | <img src="extension/screenshots/leave_application.png" width="250"> | <img src="extension/screenshots/business_trip_application.png" width="250"> |
 
@@ -44,6 +44,10 @@
     *   🟢 **綠色**：已核准 (Approved)
     *   🟡 **橘色**：簽核中 (Signing)
     *   🔴 **紅色**：被退回 (Rejected)
+
+### 🔔 6. 考勤異常通知 (New!)
+*   **自動偵測**：開啟擴充功能時，自動掃描當前頁面是否有 **「遲到」、「早退」、「未刷卡」、「缺勤」或「加班」** 等異常紀錄。
+*   **即時提醒**：在面板上直接顯示異常筆數與日期，不用在一行行檢查表格，確保考勤無誤。
 
 ---
 
