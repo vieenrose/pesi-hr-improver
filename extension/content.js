@@ -1,6 +1,6 @@
-// Pesi HR UI/UX Improver - Content Script
+// PESI HR UI/UX Improver - Content Script
 
-console.log("Pesi HR Improver loaded on:", window.location.href);
+console.log("PESI HR Improver loaded on:", window.location.href);
 
 // DEBUG: Add a temporary border to EVERYTHING to prove the extension is running
 // document.body.style.border = "5px solid red"; 
@@ -13,7 +13,7 @@ const TARGET_FORMS = {
 
 // Function to initialize improvements when a target form is detected
 function initImprovements() {
-    console.log("Pesi HR Improver: Initializing...");
+    console.log("PESI HR Improver: Initializing...");
     
     // Attempt Auto-Login immediately
     attemptAutoLogin();
@@ -65,7 +65,7 @@ function attemptAutoLogin() {
         
         if (passwordField) {
             clearInterval(loginInterval);
-            console.log("Pesi HR Improver: Login page detected. Attempting auto-login...");
+            console.log("PESI HR Improver: Login page detected. Attempting auto-login...");
             performLogin(passwordField);
         } else if (attempts >= maxAttempts) {
             clearInterval(loginInterval);
@@ -113,7 +113,7 @@ function performLogin(passwordField) {
         }
 
         if (usernameField) {
-            console.log("Pesi HR Improver: Filling credentials...");
+            console.log("PESI HR Improver: Filling credentials...");
             
             // Fill fields
             usernameField.value = result.pesi_username;
@@ -141,11 +141,11 @@ function performLogin(passwordField) {
                 }
 
                 if (submitBtn) {
-                    console.log("Pesi HR Improver: Clicking login button...", submitBtn);
+                    console.log("PESI HR Improver: Clicking login button...", submitBtn);
                     submitBtn.click();
                 } else {
                     // Fallback: Try pressing Enter on the password field
-                    console.log("Pesi HR Improver: No submit button found, trying Enter key...");
+                    console.log("PESI HR Improver: No submit button found, trying Enter key...");
                     passwordField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
                     passwordField.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
                     passwordField.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
@@ -211,7 +211,7 @@ function enhanceBusinessTripApplication() {
 
 function checkInputExistence(id) {
     if (!document.getElementById(id)) {
-        console.warn(`Pesi Extension: Expected input '${id}' not found on this page.`);
+        console.warn(`PESI Extension: Expected input '${id}' not found on this page.`);
     }
 }
 

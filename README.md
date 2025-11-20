@@ -1,6 +1,6 @@
-# Pesi HR 系統優化小幫手 (Pesi HR UI/UX Improver)
+# PESI HR 系統優化小幫手 (PESI HR UI/UX Improver)
 
-專為 **百一電子 (Pesi Electronics)** 同仁打造的 Chrome 擴充功能，讓請假、公出申請不再繁瑣，一鍵完成！
+專為 **百一電子 (PESI Electronics)** 同仁打造的 Chrome 擴充功能，讓請假、公出申請不再繁瑣，一鍵完成！
 
 ![Logo](extension/icons/icon128.png)
 
@@ -59,7 +59,7 @@
 ---
 
 ## 🛠️ 技術資訊 (For Developers)
-*   **Target System**: Pesi HR Workflow System (Legacy ASP.NET)
+*   **Target System**: PESI HR Workflow System (Legacy ASP.NET)
 *   **Tech Stack**: Vanilla JavaScript, CSS3
 *   **Core Logic**: DOM Manipulation, MutationObserver (Disabled in v0.3.11+ for stability)
 
