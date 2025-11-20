@@ -10,6 +10,30 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f8f9fa;
     }
+    .section {
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #eef0f2;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #495057;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+    .hint {
+      font-size: 11px;
+      color: #6c757d;
+      margin-top: 4px;
+    }
     h1 {
       font-size: 18px;
       margin-top: 0;
@@ -77,14 +101,13 @@
       margin-bottom: 5px;
     }
     .notification-card {
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      color: #856404;
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      display: none;
+      background: #fffaf1;
+      border: 1px solid #ffe2a8;
+      color: #6c4c00;
+      padding: 10px 12px;
+      border-radius: 10px;
       font-size: 13px;
-      display: none; /* Hidden by default */
     }
     .notification-header {
       font-weight: bold;
@@ -94,12 +117,12 @@
       margin-bottom: 5px;
     }
     .notification-list {
-      margin: 0;
-      padding-left: 20px;
+      margin: 6px 0 0 0;
+      padding-left: 16px;
       font-size: 12px;
     }
     .notification-list li {
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     }
     .refresh-hint {
       font-size: 10px;
@@ -133,6 +156,35 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    .row > * {
+      flex: 1;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-success {
+      background: #e7f6ec;
+      color: #1e8b45;
+    }
+    .badge-warning {
+      background: #fff4e5;
+      color: #b36b00;
+    }
   </style>
 </head>
 <body>
@@ -141,27 +193,34 @@
     PESI HR Helper
   </h1>
   
-  <div id="notification-area" class="notification-card">
-    <div class="notification-header">
-      <span>⚠️ 考勤異常通知</span>
-      <span id="abnormal-count" style="background: #dc3545; color: white; padding: 1px 6px; border-radius: 10px; font-size: 11px;">0</span>
-    </div>
-    <ul id="abnormal-list" class="notification-list">
-      <!-- Items will be injected here -->
-    </ul>
-    <div class="refresh-hint">
-      <span id="last-updated"></span>
-      <button id="refresh-notification-btn" class="refresh-btn">🔄 重新掃描</button>
+  <div class="section">
+    <div class="section-title">考勤異常通知</div>
+    <div id="notification-area" class="notification-card">
+      <div class="notification-header">
+        <span>⚠️ 考勤異常</span>
+        <span id="abnormal-count" class="badge badge-warning">0</span>
+      </div>
+      <ul id="abnormal-list" class="notification-list">
+        <!-- Items will be injected here -->
+      </ul>
+      <div class="refresh-hint">
+        <span id="last-updated"></span>
+        <button id="refresh-notification-btn" class="refresh-btn">🔄 重新掃描</button>
+      </div>
     </div>
   </div>
 
-  <div class="card">
+  <div class="section">
+    <div class="section-title">帳號</div>
     <label for="username">員工代號 (User ID)</label>
     <input type="text" id="username" placeholder="ex: A123">
     
     <label for="password">密碼 (Password)</label>
     <input type="password" id="password" placeholder="Password">
+  </div>
 
+  <div class="section">
+    <div class="section-title">設定</div>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#495057;">
       <input type="checkbox" id="auto-login-toggle" style="width:auto;margin:0;">
       啟用自動登入 (Auto-login on HR site)
@@ -169,13 +228,18 @@
 
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#495057;">
       <input type="checkbox" id="extra-ui-toggle" style="width:auto;margin:0;">
-      顯示進階工具 (Analyzer/模板) — 建議關閉
+      顯示進階工具 (Analyzer/模板)
     </label>
-    
+    <div class="hint">建議進階工具保持關閉，除非需要分析表單或模板功能。</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">動作</div>
     <div id="status-msg" class="status"></div>
-    
-    <button id="save-btn">💾 儲存設定 (Save)</button>
-    <button id="login-btn">🚀 一鍵登入 (Login)</button>
+    <div class="actions">
+      <button id="save-btn">💾 儲存設定 (Save)</button>
+      <button id="login-btn">🚀 一鍵登入 (Login)</button>
+    </div>
   </div>
 
   <div id="version" style="font-size: 11px; color: #adb5bd; text-align: center;"></div>
