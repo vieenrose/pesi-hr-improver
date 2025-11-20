@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveBtn = document.getElementById('save-btn');
   const loginBtn = document.getElementById('login-btn');
   const statusMsg = document.getElementById('status-msg');
+  const autoLoginToggle = document.getElementById('auto-login-toggle');
+  const extraUiToggle = document.getElementById('extra-ui-toggle');
   
   // Notification Elements
   const notificationArea = document.getElementById('notification-area');
@@ -41,123 +43,137 @@ document.addEventListener('DOMContentLoaded', function() {
   // Scan Attendance Function
   function scanAttendance() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs[0] && tabs[0].url && tabs[0].url.includes('hr.pesi.com.tw')) {
-        // Show loading state
-        const originalText = lastUpdated.textContent;
-        lastUpdated.innerHTML = '正在更新... <div class="loading-spinner"></div>';
-        
-        // Check if scripting API is available
-        if (!chrome.scripting) {
-            console.error("PESI: chrome.scripting API not available. Reload extension.");
-            lastUpdated.textContent = "請重新載入擴充功能";
+      if (!tabs[0]) return;
+
+      // Show loading state
+      lastUpdated.innerHTML = '正在更新... <div class="loading-spinner"></div>';
+
+      if (tabs[0].url && tabs[0].url.includes('hr.pesi.com.tw')) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: "scan_attendance" }, function(response) {
+          if (chrome.runtime.lastError || !response || !response.data) {
+            // If receiver missing (e.g., content script not yet injected), quietly fall back
+            lastUpdated.innerHTML = '嘗試備援掃描中... <div class="loading-spinner"></div>';
+            statusMsg.textContent = '訊息未送達，改用備援掃描';
+            statusMsg.style.color = '#ffc107';
+            runFallbackScan(tabs[0].id);
             return;
+          }
+
+          const data = response.data;
+          updateNotificationUI(data);
+
+          if (data.count === 0) {
+            notificationArea.style.display = 'block'; 
+            abnormalCount.textContent = '0';
+            abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
+            lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
+          }
+
+          chrome.storage.local.set({ 'pesi_notifications': data });
+        });
+      } else {
+        lastUpdated.textContent = "請前往 hr.pesi.com.tw 再試一次";
+      }
+    });
+  }
+
+  function runFallbackScan(tabId) {
+    if (!chrome.scripting) {
+      lastUpdated.textContent = "無法掃描，請重整頁面";
+      statusMsg.textContent = '掃描失敗：請在 HR 頁重整後再試';
+      statusMsg.style.color = '#dc3545';
+      return;
+    }
+
+    chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: function() {
+        // Inline parser fallback
+        var KEYWORDS = ['遲到', '早退', '曠職', '未刷卡', '異常', '缺勤', '加班'];
+        var DATE_REGEXES = [
+          /\d{3,4}\s*[\/\-\.]\s*\d{2}\s*[\/\-\.]\s*\d{2}/,
+          /\d{2}\s*[\/\-\.]\s*\d{2}/
+        ];
+
+        function normalize(text) {
+          return (text || '').replace(/\s+/g, ' ').trim();
         }
 
-        // Execute script in ALL frames and COLLECT results directly
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id, allFrames: true },
-            func: function() {
-                // --- INJECTED SCRAPER LOGIC START ---
-                var foundIssues = [];
-                var keywords = ['遲到', '早退', '曠職', '未刷卡', '異常', '缺勤', '加班'];
-                
-                try {
-                    var rows = document.querySelectorAll('tr');
-                    rows.forEach(function(row) {
-                        var text = (row.innerText || row.textContent || "").trim();
-                        
-                        // Check keywords
-                        var hasIssue = false;
-                        for (var i = 0; i < keywords.length; i++) {
-                            if (text.includes(keywords[i])) {
-                                hasIssue = true;
-                                break;
-                            }
-                        }
-                        
-                        if (hasIssue) {
-                            // Check date (Relaxed regex)
-                            var dateMatch = text.match(/\d{3,4}\s*[\/\-\.]\s*\d{2}\s*[\/\-\.]\s*\d{2}/) || text.match(/\d{2}\s*[\/\-\.]\s*\d{2}/);
-                            
-                            if (dateMatch) {
-                                // Extract reason
-                                var reasonText = '';
-                                var cells = row.querySelectorAll('td');
-                                cells.forEach(function(cell) {
-                                    var cellText = (cell.innerText || cell.textContent || "").trim();
-                                    for (var j = 0; j < keywords.length; j++) {
-                                        if (cellText.includes(keywords[j])) {
-                                            reasonText = cellText;
-                                            break;
-                                        }
-                                    }
-                                });
+        function parseRow(text, cells) {
+          var rowText = normalize(text);
+          if (!rowText) return null;
+          var hasKw = KEYWORDS.some(function(k) { return rowText.includes(k); });
+          if (!hasKw) return null;
+          var dateMatch = DATE_REGEXES.map(function(rx){ return rowText.match(rx); }).find(Boolean);
+          if (!dateMatch) return null;
+          var reason = '';
+          cells.forEach(function(cellText) {
+            var norm = normalize(cellText);
+            if (KEYWORDS.some(function(k){ return norm.includes(k); })) reason = norm;
+          });
+          if (!reason) {
+            var m = rowText.match(new RegExp('(' + KEYWORDS.join('|') + ')'));
+            if (m) reason = m[0];
+          }
+          if (!reason) return null;
+          if (reason.length > 25) reason = reason.slice(0,25) + '...';
+          return dateMatch[0].replace(/\s/g,'') + ' ' + reason;
+        }
 
-                                if (!reasonText) {
-                                     var match = text.match(new RegExp('(' + keywords.join('|') + ')'));
-                                     if (match) reasonText = match[0];
-                                }
-
-                                if (reasonText) {
-                                    reasonText = reasonText.replace(/\s+/g, ' ').trim();
-                                    if (reasonText.length > 25) reasonText = reasonText.substring(0, 25) + '...';
-                                    var dateStr = dateMatch[0].replace(/\s/g, '');
-                                    foundIssues.push(dateStr + ' ' + reasonText);
-                                }
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error("PESI Scraper Error:", e);
-                }
-                return foundIssues;
-                // --- INJECTED SCRAPER LOGIC END ---
-            }
-        }, function(results) {
-            // Process results from ALL frames
-            var allIssues = [];
-            if (results && results.length > 0) {
-                results.forEach(function(frameResult) {
-                    if (frameResult.result && Array.isArray(frameResult.result)) {
-                        allIssues = allIssues.concat(frameResult.result);
-                    }
-                });
-            }
-
-            // Deduplicate
-            allIssues = [...new Set(allIssues)];
-
-            // Update UI
-            var data = {
-                count: allIssues.length,
-                items: allIssues.slice(0, 5),
-                lastUpdated: Date.now()
-            };
-            
-            updateNotificationUI(data);
-            
-            if (allIssues.length === 0) {
-                notificationArea.style.display = 'block'; 
-                abnormalCount.textContent = '0';
-                abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
-                lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
-            }
-
-            // Save to storage
-            chrome.storage.local.set({ 'pesi_notifications': data });
+        var issues = [];
+        var rows = document.querySelectorAll('tr');
+        rows.forEach(function(row){
+          var txt = row.innerText || row.textContent || '';
+          var cells = Array.from(row.querySelectorAll('td')).map(function(td){ return td.innerText || td.textContent || ''; });
+          var issue = parseRow(txt, cells);
+          if (issue) issues.push(issue);
         });
+        return Array.from(new Set(issues));
+      }
+    }, function(results) {
+      try {
+        var allIssues = [];
+        if (results && results.length > 0) {
+          results.forEach(function(r) {
+            if (r.result && Array.isArray(r.result)) {
+              allIssues = allIssues.concat(r.result);
+            }
+          });
+        }
+        allIssues = Array.from(new Set(allIssues));
+        var data = {
+          count: allIssues.length,
+          items: allIssues.slice(0,5),
+          lastUpdated: Date.now()
+        };
+        updateNotificationUI(data);
+        if (data.count === 0) {
+          notificationArea.style.display = 'block'; 
+          abnormalCount.textContent = '0';
+          abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
+          lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
+        }
+        chrome.storage.local.set({ 'pesi_notifications': data });
+        statusMsg.textContent = data.count > 0 ? `找到 ${data.count} 筆異常` : '掃描完成';
+        statusMsg.style.color = '#28a745';
+      } catch (e) {
+        lastUpdated.textContent = "備援掃描失敗，請重整 HR 頁面後再試";
+        statusMsg.textContent = '掃描失敗，請重整後再試';
+        statusMsg.style.color = '#dc3545';
       }
     });
   }
 
   // Load saved credentials and notifications
-  chrome.storage.local.get(['pesi_username', 'pesi_password', 'pesi_notifications'], function(result) {
+  chrome.storage.local.get(['pesi_username', 'pesi_password', 'pesi_notifications', 'pesi_auto_login_enabled', 'pesi_enable_extra_ui'], function(result) {
     if (result.pesi_username) {
       usernameInput.value = result.pesi_username;
     }
     if (result.pesi_password) {
       passwordInput.value = result.pesi_password;
     }
+    autoLoginToggle.checked = result.pesi_auto_login_enabled !== false; // default true
+    extraUiToggle.checked = !!result.pesi_enable_extra_ui;
     
     // Initial Load
     if (result.pesi_notifications) {
@@ -170,14 +186,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Save credentials function
   function saveCredentials(callback) {
-    const username = usernameInput.value;
+    const username = usernameInput.value.trim();
     const password = passwordInput.value;
+    const autoLoginEnabled = autoLoginToggle.checked;
+    const extraUiEnabled = extraUiToggle.checked;
+
+    if (!username || !password) {
+      statusMsg.textContent = '請輸入帳號與密碼 (Username and password required)';
+      statusMsg.style.color = '#dc3545';
+      return;
+    }
 
     chrome.storage.local.set({
       pesi_username: username,
-      pesi_password: password
+      pesi_password: password,
+      pesi_auto_login_enabled: autoLoginEnabled,
+      pesi_enable_extra_ui: extraUiEnabled
     }, function() {
       statusMsg.textContent = '已儲存 (Saved)!';
+      statusMsg.style.color = '#28a745';
       setTimeout(() => {
         statusMsg.textContent = '';
       }, 2000);
@@ -193,19 +220,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Login button click
   loginBtn.addEventListener('click', function() {
     saveCredentials(function() {
+      statusMsg.textContent = '開啟 HR 頁面並自動登入中...';
+      statusMsg.style.color = '#28a745';
       const targetUrl = 'https://hr.pesi.com.tw/HtmlWorkFlow/Index.html';
       
-      // Check if tab already exists
       chrome.tabs.query({url: "https://hr.pesi.com.tw/*"}, function(tabs) {
         if (tabs.length > 0) {
-          // Update existing tab
           chrome.tabs.update(tabs[0].id, {active: true, url: targetUrl});
-          window.close(); // Close popup
         } else {
-          // Create new tab
           chrome.tabs.create({url: targetUrl});
-          window.close(); // Close popup
         }
+        // Slight delay before close to allow status to show briefly
+        setTimeout(() => window.close(), 150);
       });
     });
   });

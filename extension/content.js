@@ -11,12 +11,73 @@ const TARGET_FORMS = {
     BUSINESS_TRIP: 'SW0210' // 公出/出差申請單作業
 };
 
+// Feature flags (loaded from storage; defaults to safe/off)
+const featureFlags = {
+    extraUi: false, // dev/extra UI like analyzer buttons or template cards
+};
+
+chrome.storage && chrome.storage.local.get(['pesi_enable_extra_ui'], (res) => {
+    featureFlags.extraUi = !!res.pesi_enable_extra_ui;
+    // Re-run registry after flags load
+    featureRegistry.runAll();
+});
+
+function enableExtraUi() {
+    return !!featureFlags.extraUi;
+}
+
+// Simple feature registry to keep per-feature init idempotent
+class FeatureRegistry {
+    constructor() {
+        this.features = [];
+    }
+
+    register(name, options) {
+        this.features.push({ name, hasRun: false, ...options });
+    }
+
+    runAll() {
+        this.features.forEach(feature => {
+            const { shouldRun, init, runMode } = feature;
+            if (shouldRun && !shouldRun()) return;
+            if (runMode === 'once' && feature.hasRun) return;
+            try {
+                init();
+                feature.hasRun = true;
+            } catch (e) {
+                console.error(`PESI feature '${feature.name}' failed to init`, e);
+            }
+        });
+    }
+}
+
+const featureRegistry = new FeatureRegistry();
+
+// Debounce helper to avoid hammering the DOM on noisy pages
+function debounce(fn, wait = 300) {
+    let timer = null;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), wait);
+    };
+}
+
+// Guard: ensure we only operate on the HR domain
+function isHrDomain() {
+    return location.hostname.includes('hr.pesi.com.tw');
+}
+
 // Function to initialize improvements when a target form is detected
 function initImprovements() {
+    if (!isHrDomain()) {
+        console.log("PESI HR Improver: Skipping non-HR domain.");
+        return;
+    }
+
     console.log("PESI HR Improver: Initializing...");
     
-    // Attempt Auto-Login immediately
-    attemptAutoLogin();
+    // Run registered features (idempotent per-feature)
+    featureRegistry.runAll();
 
     // SAFE MODE: Wait for the page to be fully settled
     // Legacy ASP.NET pages often have complex initialization scripts.
@@ -27,346 +88,44 @@ function initImprovements() {
 
     // Fallback: Check on clicks (for navigation that might not trigger reload)
     document.addEventListener('click', () => setTimeout(checkAndEnhanceForms, 1000));
+
+    // Observe DOM mutations to re-run enhancements after partial postbacks
+    const debouncedEnhance = debounce(() => {
+        featureRegistry.runAll();
+        checkAndEnhanceForms();
+    }, 400);
+    const observer = new MutationObserver(() => debouncedEnhance());
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function isLeaveContext() {
+    const url = window.location.href;
+    const title = document.title || '';
+    const bodyText = document.body.textContent || '';
+    const isLeaveUrl = url.includes("SW0029");
+    const isLeaveText = bodyText.includes("請假申請") || title.includes("請假申請") || bodyText.includes("Leave Application");
+    return isLeaveUrl || isLeaveText;
+}
+
+function isTripContext() {
+    const url = window.location.href;
+    const title = document.title || '';
+    const bodyText = document.body.textContent || '';
+    const isTripUrl = url.includes("SW0210") || url.includes("SW0212");
+    const isTripText = bodyText.includes("公出") || bodyText.includes("出差") || title.includes("公出") || title.includes("出差") || bodyText.includes("Business Trip");
+    return isTripUrl || isTripText;
 }
 
 function checkAndEnhanceForms() {
-    // Use textContent instead of innerText to avoid forcing layout reflows
-    const bodyText = document.body.textContent;
-    const url = window.location.href;
-    const title = document.title;
-
-    // Debug: Check what we are seeing
-    // console.log("Checking page content...");
-
-    // Detection logic
-    // 1. Check URL for Function IDs
-    const isLeaveUrl = url.includes("SW0029");
-    const isTripUrl = url.includes("SW0210") || url.includes("SW0212");
-
-    // 2. Check Content/Title for Keywords
-    // Note: "公出/出差" might be split or encoded differently. We check for parts of it.
-    const isLeaveText = bodyText.includes("請假申請") || title.includes("請假申請") || bodyText.includes("Leave Application");
-    const isTripText = bodyText.includes("公出") || bodyText.includes("出差") || title.includes("公出") || title.includes("出差") || bodyText.includes("Business Trip");
-
-    if (isLeaveUrl || isLeaveText) {
-        enhanceLeaveApplication();
-    } else if (isTripUrl || isTripText) {
-        enhanceBusinessTripApplication();
-    }
-    
-    // Always check for attendance abnormalities on any page (background check)
-    // This ensures we catch it whenever the user visits the dashboard or attendance page
-    setTimeout(checkAttendanceAbnormalities, 1500);
+    featureRegistry.runAll();
 }
 
-function checkAttendanceAbnormalities(isManual = false) {
-    console.log(`PESI: Checking for attendance abnormalities (Deep Scan, Manual: ${isManual})...`);
-    
-    let foundIssues = [];
-    // Added '缺勤' (Absence) and '加班' (Overtime warning) based on user feedback
-    const keywords = ['遲到', '早退', '曠職', '未刷卡', '異常', '缺勤', '加班'];
-    
-    // Select all rows in the document
-    // Use 'tr' and also check for 'div' that might look like a row (common in modern frameworks, though this is ASP.NET)
-    const rows = document.querySelectorAll('tr');
-    console.log(`PESI: Found ${rows.length} rows in frame: ${window.location.href}`);
-
-    rows.forEach(row => {
-        // Use textContent as fallback for innerText (sometimes innerText is empty for hidden elements)
-        const text = (row.innerText || row.textContent).trim();
-        
-        // Debug: Log rows that look like they might be relevant
-        if (text.includes('2025') || text.includes('2024')) {
-             // console.log("PESI: Found row with year:", text);
-        }
-
-        // Check if row contains any keyword
-        const hasIssue = keywords.some(k => text.includes(k));
-        
-        if (hasIssue) {
-            // Support YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD, MM/DD, and ROC years (e.g. 112/01/01)
-            // Relaxed regex to allow spaces
-            const dateMatch = text.match(/\d{3,4}\s*[\/\-\.]\s*\d{2}\s*[\/\-\.]\s*\d{2}/) || text.match(/\d{2}\s*[\/\-\.]\s*\d{2}/);
-            
-            if (dateMatch) {
-                // Found a date and a keyword!
-                console.log("PESI: Match found!", text);
-
-                // Improved extraction: Try to find the cell containing the keyword
-                let reasonText = '';
-                const cells = row.querySelectorAll('td');
-                cells.forEach(cell => {
-                    const cellText = cell.innerText.trim();
-                    if (keywords.some(k => cellText.includes(k))) {
-                        reasonText = cellText;
-                    }
-                });
-
-                // Fallback if no cell match (unlikely)
-                if (!reasonText) {
-                     const match = text.match(new RegExp(`(${keywords.join('|')})`));
-                     if (match) reasonText = match[0];
-                }
-
-                if (reasonText) {
-                    // Clean up reason text (remove newlines, extra spaces)
-                    reasonText = reasonText.replace(/\s+/g, ' ').trim();
-                    // Truncate if too long
-                    if (reasonText.length > 25) reasonText = reasonText.substring(0, 25) + '...';
-                    
-                    // Clean up date (remove spaces)
-                    const dateStr = dateMatch[0].replace(/\s/g, '');
-                    
-                    const issue = `${dateStr} ${reasonText}`;
-                    foundIssues.push(issue);
-                }
-            }
-        }
-    });
-
-    // Remove duplicates
-    foundIssues = [...new Set(foundIssues)];
-
-    if (foundIssues.length > 0) {
-        console.log("PESI: Total unique issues found:", foundIssues.length);
-        chrome.storage.local.set({
-            'pesi_notifications': {
-                count: foundIssues.length,
-                items: foundIssues.slice(0, 5),
-                lastUpdated: Date.now()
-            }
-        });
-    } else {
-        console.log("PESI: No issues found in this frame.");
-        // Do NOT clear storage here. 
-        // The popup clears it before scanning.
-        // If we clear it here, we might overwrite results from another frame.
-    }
-}
-
-// Listen for messages from Popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "scan_attendance") {
-        console.log("PESI HR Improver: Manual scan requested by popup (via message).");
-        checkAttendanceAbnormalities(true);
-        sendResponse({ success: true });
-    }
-});
-
-// Listen for Custom Event (triggered by executeScript in all frames)
-document.addEventListener('pesi_manual_scan', function() {
-    console.log("PESI HR Improver: Manual scan requested by popup (via Event).");
-    checkAttendanceAbnormalities(true);
-});
-
-function attemptAutoLogin() {
-    let attempts = 0;
-    const maxAttempts = 10; // Try for 5 seconds (500ms * 10)
-
-    const loginInterval = setInterval(() => {
-        attempts++;
-        const passwordField = document.querySelector('input[type="password"]');
-        
-        if (passwordField) {
-            clearInterval(loginInterval);
-            console.log("PESI HR Improver: Login page detected. Attempting auto-login...");
-            performLogin(passwordField);
-        } else if (attempts >= maxAttempts) {
-            clearInterval(loginInterval);
-        }
-    }, 500);
-}
-
-function performLogin(passwordField) {
-    chrome.storage.local.get(['pesi_username', 'pesi_password'], function(result) {
-        if (!result.pesi_username || !result.pesi_password) return;
-
-        let usernameField = null;
-
-        // Strategy 1: Specific IDs often used in ASP.NET or common frameworks
-        const specificSelectors = [
-            'input[name*="User"]', 'input[id*="User"]', 
-            'input[name*="ID"]', 'input[id*="ID"]', 
-            'input[name*="Account"]', 'input[id*="Account"]',
-            'input[name*="uid"]', 'input[id*="uid"]'
-        ];
-        
-        for (const selector of specificSelectors) {
-            const el = document.querySelector(selector);
-            if (el && el.offsetParent !== null) { // Must be visible
-                usernameField = el;
-                break;
-            }
-        }
-
-        // Strategy 2: Relative position (Input immediately before password)
-        if (!usernameField) {
-            const allInputs = Array.from(document.querySelectorAll('input'));
-            const passIndex = allInputs.indexOf(passwordField);
-            if (passIndex > 0) {
-                // Search backwards from password field for the first visible text input
-                for (let i = passIndex - 1; i >= 0; i--) {
-                    const input = allInputs[i];
-                    const type = input.type ? input.type.toLowerCase() : 'text';
-                    if ((type === 'text' || type === 'email') && input.offsetParent !== null) {
-                        usernameField = input;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (usernameField) {
-            console.log("PESI HR Improver: Filling credentials...");
-            
-            // Fill fields
-            usernameField.value = result.pesi_username;
-            passwordField.value = result.pesi_password;
-
-            // Trigger events
-            ['input', 'change', 'blur'].forEach(eventType => {
-                usernameField.dispatchEvent(new Event(eventType, { bubbles: true }));
-                passwordField.dispatchEvent(new Event(eventType, { bubbles: true }));
-            });
-
-            // Attempt to submit
-            setTimeout(() => {
-                // Try to find the submit button
-                let submitBtn = document.querySelector('input[type="submit"], button[type="submit"]');
-                
-                if (!submitBtn) {
-                    // Look for buttons with "Login" or "登入" in ID or text
-                    const allButtons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="image"], a.btn, a[role="button"]'));
-                    submitBtn = allButtons.find(btn => {
-                        const text = (btn.innerText || btn.value || "").toLowerCase();
-                        const id = (btn.id || "").toLowerCase();
-                        return text.includes("login") || text.includes("登入") || id.includes("login") || id.includes("submit");
-                    });
-                }
-
-                if (submitBtn) {
-                    console.log("PESI HR Improver: Clicking login button...", submitBtn);
-                    submitBtn.click();
-                } else {
-                    // Fallback: Try pressing Enter on the password field
-                    console.log("PESI HR Improver: No submit button found, trying Enter key...");
-                    passwordField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-                    passwordField.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-                    passwordField.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-                }
-            }, 800); // Wait a bit longer for events to settle
-        }
-    });
-}
-
-function enhanceLeaveApplication() {
-    // REMOVED BLOCKING CHECK:
-    // We must allow this function to run again if the page does a partial update (AJAX),
-    // otherwise our buttons might disappear and never come back.
-    
-    console.log("MATCH: Leave Application detected. Checking features...");
-    if (!document.body.classList.contains('pesi-enhanced-leave')) {
-        document.body.classList.add('pesi-enhanced-leave');
-    }
-    
-    // Add Productivity Features
-    addQuickDateButtons('from_date');
-    addQuickDateButtons('to_date', 'from_date'); // Link End Date to Start Date
-    addQuickTimeButtons('from_time');
-    addQuickTimeButtons('to_time');
-    
-    // Add Real-time Duration Calculator
-    initAutoDurationCalculator();
-    
-    // Smart Input Features (History & Presets)
-    addSmartInputFeatures('reason', 'pesi_history_reason', ['私事處理', '身體不適', '看診', '家庭照顧']);
-    addSmartInputFeatures('ab_type', 'pesi_history_ab_type', ['特休', '事假', '病假', '補休']);
-    
-    // Defaults & Visuals
-    enhanceHistoryTables();
-}
-
-
-function enhanceBusinessTripApplication() {
-    // REMOVED BLOCKING CHECK:
-    // Allow re-running to restore buttons after AJAX updates.
-    
-    console.log("MATCH: Business Trip Application detected. Checking features...");
-    if (!document.body.classList.contains('pesi-enhanced-trip')) {
-        document.body.classList.add('pesi-enhanced-trip');
-    }
-    
-    // Productivity Features
-    addQuickDateButtons('from_date');
-    addQuickDateButtons('to_date', 'from_date'); // Link End Date to Start Date
-    addQuickTimeButtons('from_time');
-    addQuickTimeButtons('to_time');
-    
-    initAutoDurationCalculator();
-    
-    // Smart Input Features for Trip
-    addSmartInputFeatures('reason', 'pesi_history_trip_reason', ['客戶拜訪', '專案會議', '教育訓練', '設備維護']);
-    
-    // Re-enable Smart Chips for ab_type (Leave Type)
-    addSmartInputFeatures('ab_type', 'pesi_trip_type_safe', ['公出', '出差']);
-    
-    // Defaults & Visuals
-    enhanceHistoryTables();
-}
-
-function checkInputExistence(id) {
-    if (!document.getElementById(id)) {
-        console.warn(`PESI Extension: Expected input '${id}' not found on this page.`);
-    }
-}
-
-// --- Productivity Features ---
-
-function applyDefaults() {
-    const fTime = document.getElementById('from_time');
-    const tTime = document.getElementById('to_time');
-    
-    // Only set if empty
-    if (fTime && !fTime.value) {
-        fTime.value = '09:00';
-        triggerChange(fTime);
-    }
-    if (tTime && !tTime.value) {
-        tTime.value = '18:00';
-        triggerChange(tTime);
-    }
-}
-
-function enhanceHistoryTables() {
-    // Find tables that look like data grids (usually have headers or many rows)
-    const tables = document.querySelectorAll('table');
-    
-    tables.forEach(table => {
-        // Check if it's likely a data table
-        if (table.rows.length < 2) return;
-        
-        // Check rows for status keywords
-        Array.from(table.rows).forEach(row => {
-            const text = row.innerText;
-            
-            // Status Coloring
-            if (text.includes('已核准') || text.includes('Approved')) {
-                row.style.backgroundColor = '#d4edda'; // Green tint
-                row.style.borderLeft = '5px solid #28a745';
-            } else if (text.includes('簽核中') || text.includes('Signing') || text.includes('Pending')) {
-                row.style.backgroundColor = '#fff3cd'; // Orange tint
-                row.style.borderLeft = '5px solid #ffc107';
-            } else if (text.includes('退回') || text.includes('Rejected') || text.includes('Return')) {
-                row.style.backgroundColor = '#f8d7da'; // Red tint
-                row.style.borderLeft = '5px solid #dc3545';
-            }
-        });
-    });
-}
+// Legacy helper retained: placeholder for backward compat (no-op)
+function checkInputExistence(id) {}
 
 function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
     const input = document.getElementById(inputId);
-    if (!input) return;
+    if (!input) return; // Field not present on this page; skip quietly.
 
     // Container for chips
     const containerId = `pesi-smart-${inputId}`;
@@ -646,10 +405,7 @@ function runAnalysis() {
 
 function addQuickDateButtons(inputId, relatedStartId = null) {
     const input = document.getElementById(inputId);
-    if (!input) {
-        console.warn(`Pesi Extension: Input ${inputId} not found.`);
-        return;
-    }
+    if (!input) return; // Missing field on this page; skip quietly.
     
     // Prevent duplicate buttons using a specific ID for the container
     const containerId = `pesi-actions-${inputId}`;
@@ -691,7 +447,7 @@ function addQuickDateButtons(inputId, relatedStartId = null) {
 
 function addQuickTimeButtons(inputId) {
     const input = document.getElementById(inputId);
-    if (!input) return;
+    if (!input) return; // Skip quietly if field not present.
 
     // Prevent duplicate buttons using a specific ID
     const containerId = `pesi-actions-${inputId}`;
@@ -800,7 +556,7 @@ function initAutoDurationCalculator() {
     const inputs = ['from_date', 'from_time', 'to_date', 'to_time'];
     const elements = inputs.map(id => document.getElementById(id)).filter(el => el);
     
-    if (elements.length !== 4) return;
+    if (elements.length !== 4) return; // Skip quietly if any field missing.
 
     // Create display element
     const display = document.createElement('div');
@@ -955,6 +711,55 @@ function createStatusBadge(text) {
 }
 
 // Start the script
+// Register features (auto-login, attendance scan) with the registry
+featureRegistry.register('auto-login', {
+    init: () => {
+        if (typeof PesiAutoLogin !== 'undefined') {
+            PesiAutoLogin.initAutoLogin({ isHrDomain, chromeObj: chrome, locationObj: location });
+        }
+    },
+    shouldRun: () => isHrDomain(),
+    runMode: 'once'
+});
+
+featureRegistry.register('attendance-scan', {
+    init: () => {
+        if (typeof PesiAttendanceScan !== 'undefined') {
+            PesiAttendanceScan.initAttendanceScan({ isHrDomain, parser: PesiAttendanceParser, featureRegistry });
+        }
+    },
+    shouldRun: () => isHrDomain()
+});
+
+featureRegistry.register('leave-enhancer', {
+    init: () => {
+        if (typeof PesiLeaveEnhancer !== 'undefined') {
+            PesiLeaveEnhancer.enhanceLeaveApplication();
+        }
+        // Extra UI (debug/developer tools) gated by feature flag
+        if (enableExtraUi() && typeof PesiAnalyzer !== 'undefined') {
+            PesiAnalyzer.addRobustAnalyzer();
+        }
+    },
+    shouldRun: () => isHrDomain() && isLeaveContext()
+});
+
+featureRegistry.register('trip-enhancer', {
+    init: () => {
+        if (typeof PesiTripEnhancer !== 'undefined') {
+            PesiTripEnhancer.enhanceBusinessTripApplication();
+        }
+        // Extra UI (debug/developer tools) gated by feature flag
+        if (enableExtraUi() && typeof PesiTemplates !== 'undefined') {
+            PesiTemplates.addTripTemplateFeatures();
+        }
+        if (enableExtraUi() && typeof PesiAnalyzer !== 'undefined') {
+            PesiAnalyzer.addAnalyzerButton();
+        }
+    },
+    shouldRun: () => isHrDomain() && isTripContext()
+});
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initImprovements);
 } else {
