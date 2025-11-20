@@ -31,6 +31,7 @@
         "features/attendanceScan.js",
         "features/analyzer.js",
         "features/templates.js",
+        "features/dateTimePicker.js",
         "features/leaveEnhancer.js",
         "features/tripEnhancer.js",
         "content.js"

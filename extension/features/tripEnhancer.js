@@ -15,6 +15,13 @@
         addSmartInputFeatures('reason', 'pesi_history_trip_reason', ['客戶拜訪', '專案會議', '教育訓練', '設備維護']);
         addSmartInputFeatures('ab_type', 'pesi_trip_type_safe', ['公出', '出差']);
         
+        if (root.PesiDateTimePicker) {
+            root.PesiDateTimePicker.attachPickers({
+                dateIds: ['from_date', 'to_date'],
+                timeIds: ['from_time', 'to_time']
+            });
+        }
+
         enhanceHistoryTables();
     }
 
