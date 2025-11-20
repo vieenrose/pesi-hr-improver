@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pesi HR UI/UX Improver",
-    "version": "0.3.17",
+    "version": "0.3.18",
 
   "description": "Improves the UI/UX of Pesi Electronics HR Workflow System, focusing on Leave and Business Trip applications.",
   "icons": {
