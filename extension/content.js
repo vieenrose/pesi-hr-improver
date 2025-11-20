@@ -15,6 +15,9 @@ const TARGET_FORMS = {
 function initImprovements() {
     console.log("Pesi HR Improver: Initializing...");
     
+    // Attempt Auto-Login immediately
+    attemptAutoLogin();
+
     // SAFE MODE: Wait for the page to be fully settled
     // Legacy ASP.NET pages often have complex initialization scripts.
     // We wait 1 second after load to ensure we don't interfere with them.
@@ -47,11 +50,109 @@ function checkAndEnhanceForms() {
 
     if (isLeaveUrl || isLeaveText) {
         enhanceLeaveApplication();
-    }
-    
-    if (isTripUrl || isTripText) {
+    } else if (isTripUrl || isTripText) {
         enhanceBusinessTripApplication();
     }
+}
+
+function attemptAutoLogin() {
+    let attempts = 0;
+    const maxAttempts = 10; // Try for 5 seconds (500ms * 10)
+
+    const loginInterval = setInterval(() => {
+        attempts++;
+        const passwordField = document.querySelector('input[type="password"]');
+        
+        if (passwordField) {
+            clearInterval(loginInterval);
+            console.log("Pesi HR Improver: Login page detected. Attempting auto-login...");
+            performLogin(passwordField);
+        } else if (attempts >= maxAttempts) {
+            clearInterval(loginInterval);
+        }
+    }, 500);
+}
+
+function performLogin(passwordField) {
+    chrome.storage.local.get(['pesi_username', 'pesi_password'], function(result) {
+        if (!result.pesi_username || !result.pesi_password) return;
+
+        let usernameField = null;
+
+        // Strategy 1: Specific IDs often used in ASP.NET or common frameworks
+        const specificSelectors = [
+            'input[name*="User"]', 'input[id*="User"]', 
+            'input[name*="ID"]', 'input[id*="ID"]', 
+            'input[name*="Account"]', 'input[id*="Account"]',
+            'input[name*="uid"]', 'input[id*="uid"]'
+        ];
+        
+        for (const selector of specificSelectors) {
+            const el = document.querySelector(selector);
+            if (el && el.offsetParent !== null) { // Must be visible
+                usernameField = el;
+                break;
+            }
+        }
+
+        // Strategy 2: Relative position (Input immediately before password)
+        if (!usernameField) {
+            const allInputs = Array.from(document.querySelectorAll('input'));
+            const passIndex = allInputs.indexOf(passwordField);
+            if (passIndex > 0) {
+                // Search backwards from password field for the first visible text input
+                for (let i = passIndex - 1; i >= 0; i--) {
+                    const input = allInputs[i];
+                    const type = input.type ? input.type.toLowerCase() : 'text';
+                    if ((type === 'text' || type === 'email') && input.offsetParent !== null) {
+                        usernameField = input;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (usernameField) {
+            console.log("Pesi HR Improver: Filling credentials...");
+            
+            // Fill fields
+            usernameField.value = result.pesi_username;
+            passwordField.value = result.pesi_password;
+
+            // Trigger events
+            ['input', 'change', 'blur'].forEach(eventType => {
+                usernameField.dispatchEvent(new Event(eventType, { bubbles: true }));
+                passwordField.dispatchEvent(new Event(eventType, { bubbles: true }));
+            });
+
+            // Attempt to submit
+            setTimeout(() => {
+                // Try to find the submit button
+                let submitBtn = document.querySelector('input[type="submit"], button[type="submit"]');
+                
+                if (!submitBtn) {
+                    // Look for buttons with "Login" or "登入" in ID or text
+                    const allButtons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="image"], a.btn, a[role="button"]'));
+                    submitBtn = allButtons.find(btn => {
+                        const text = (btn.innerText || btn.value || "").toLowerCase();
+                        const id = (btn.id || "").toLowerCase();
+                        return text.includes("login") || text.includes("登入") || id.includes("login") || id.includes("submit");
+                    });
+                }
+
+                if (submitBtn) {
+                    console.log("Pesi HR Improver: Clicking login button...", submitBtn);
+                    submitBtn.click();
+                } else {
+                    // Fallback: Try pressing Enter on the password field
+                    console.log("Pesi HR Improver: No submit button found, trying Enter key...");
+                    passwordField.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                    passwordField.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                    passwordField.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                }
+            }, 800); // Wait a bit longer for events to settle
+        }
+    });
 }
 
 function enhanceLeaveApplication() {
