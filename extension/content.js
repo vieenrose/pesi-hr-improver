@@ -280,6 +280,7 @@ function enhanceLeaveApplication() {
     
     // Smart Input Features (History & Presets)
     addSmartInputFeatures('reason', 'pesi_history_reason', ['私事處理', '身體不適', '看診', '家庭照顧']);
+    addSmartInputFeatures('ab_type', 'pesi_history_ab_type', ['特休', '事假', '病假', '補休']);
     
     // Defaults & Visuals
     enhanceHistoryTables();
