@@ -1,0 +1,209 @@
+/* Pesi HR UI/UX Improver - Styles */
+
+:root {
+    --pesi-primary: #007bff;
+    --pesi-secondary: #6c757d;
+    --pesi-success: #28a745;
+    --pesi-bg: #f8f9fa;
+    --pesi-card-bg: #ffffff;
+    --pesi-text: #333333;
+    --pesi-border-radius: 8px;
+    --pesi-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* General Enhancements */
+body.pesi-enhanced-leave,
+body.pesi-enhanced-trip {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--pesi-bg);
+    color: var(--pesi-text);
+    line-height: 1.6;
+    /* Visual Indicator */
+    border-top: 4px solid var(--pesi-primary);
+}
+
+/* Removed aggressive global font override and animation to prevent display issues */
+/*
+body.pesi-enhanced-leave *,
+body.pesi-enhanced-trip * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+@keyframes pesi-fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+*/
+
+/* Scrollbar Styling */
+body.pesi-enhanced-leave::-webkit-scrollbar,
+body.pesi-enhanced-trip::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+body.pesi-enhanced-leave::-webkit-scrollbar-track,
+body.pesi-enhanced-trip::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+body.pesi-enhanced-leave::-webkit-scrollbar-thumb,
+body.pesi-enhanced-trip::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 5px;
+}
+body.pesi-enhanced-leave::-webkit-scrollbar-thumb:hover,
+body.pesi-enhanced-trip::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Modernize Inputs and Selects - DISABLED to prevent layout breakage */
+/*
+body.pesi-enhanced-leave input[type="text"],
+body.pesi-enhanced-leave input[type="password"],
+body.pesi-enhanced-leave input[type="number"],
+body.pesi-enhanced-leave select,
+body.pesi-enhanced-leave textarea,
+body.pesi-enhanced-trip input[type="text"],
+body.pesi-enhanced-trip select,
+body.pesi-enhanced-trip textarea {
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    margin: 5px 0;
+    box-sizing: border-box; 
+}
+
+body.pesi-enhanced-leave input:focus,
+body.pesi-enhanced-leave select:focus,
+body.pesi-enhanced-leave textarea:focus,
+body.pesi-enhanced-trip input:focus,
+body.pesi-enhanced-trip select:focus,
+body.pesi-enhanced-trip textarea:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+*/
+
+/* Modernize Tables (Legacy Layouts) - DISABLED to prevent layout breakage */
+/*
+body.pesi-enhanced-leave table,
+body.pesi-enhanced-trip table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1rem;
+    background-color: transparent;
+}
+
+body.pesi-enhanced-leave th,
+body.pesi-enhanced-leave td,
+body.pesi-enhanced-trip th,
+body.pesi-enhanced-trip td {
+    padding: 0.75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+*/
+
+/* Header Cells */
+/*
+body.pesi-enhanced-leave th,
+body.pesi-enhanced-trip th {
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: 600;
+    text-align: left;
+}
+*/
+
+/* Table Row Hover */
+/*
+body.pesi-enhanced-leave tr:hover td,
+body.pesi-enhanced-trip tr:hover td {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+*/
+
+/* Modernize buttons */
+/* Only apply to our own buttons, not global ones */
+/*
+button, input[type="button"], input[type="submit"] {
+    background-color: var(--pesi-primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:hover, input[type="button"]:hover, input[type="submit"]:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+*/
+
+/* Card style for forms - DISABLED */
+/*
+form {
+    background-color: var(--pesi-card-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    max-width: 900px;
+    margin: 30px auto;
+    border: 1px solid #e0e0e0;
+}
+*/
+
+/* Quick Action Buttons */
+.pesi-quick-actions {
+    display: inline-flex;
+    gap: 5px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.pesi-quick-btn {
+    background-color: #f8f9fa !important; /* Lighter background */
+    color: #495057 !important;
+    border: 1px solid #ced4da !important;
+    padding: 2px 8px !important; /* Smaller padding */
+    font-size: 11px !important; /* Smaller font */
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.pesi-quick-btn:hover {
+    background-color: #e2e6ea !important;
+    color: #212529 !important;
+    border-color: #adb5bd !important;
+}
+
+/* Smart Chips */
+.pesi-chip {
+    background-color: #e7f1ff;
+    color: #007bff;
+    border: 1px solid #b8daff;
+    border-radius: 12px;
+    padding: 2px 8px; /* Smaller padding */
+    font-size: 11px; /* Smaller font */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pesi-chip:hover {
+    background-color: #007bff;
+    color: white;
+    transform: translateY(-1px);
+}
+
+

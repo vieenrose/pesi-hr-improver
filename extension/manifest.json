@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Pesi HR UI/UX Improver",
+    "version": "0.3.17",
+
+  "description": "Improves the UI/UX of Pesi Electronics HR Workflow System, focusing on Leave and Business Trip applications.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://hr.pesi.com.tw/*"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Pesi HR Improver"
+  }
+}
