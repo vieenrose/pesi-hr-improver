@@ -11,33 +11,74 @@ document.addEventListener('DOMContentLoaded', function() {
   const autoLoginToggle = document.getElementById('auto-login-toggle');
   const extraUiToggle = document.getElementById('extra-ui-toggle');
   
-  // Notification Elements
-  const notificationArea = document.getElementById('notification-area');
-  const abnormalCount = document.getElementById('abnormal-count');
-  const abnormalList = document.getElementById('abnormal-list');
+  // New UI Elements for Material Design 3
+  const statusSection = document.getElementById('status-section');
+  const statusIcon = document.getElementById('status-icon');
+  const statusText = document.getElementById('status-text');
+  const statusList = document.getElementById('status-list');
   const lastUpdated = document.getElementById('last-updated');
+  const refreshBtn = document.getElementById('refresh-notification-btn');
   const aboutLink = document.getElementById('about-link');
 
-  // Display Notifications Function
-  function updateNotificationUI(data) {
-    if (data && data.count > 0) {
-      notificationArea.style.display = 'block';
-      abnormalCount.textContent = data.count;
+  // Enhanced Status Management
+  function updateStatusUI(data) {
+    if (!data) {
+      showStatusMessage('獲取資料時發生錯誤', 'error');
+      return;
+    }
+
+    // Reset status list
+    statusList.innerHTML = '';
+    
+    if (data.count > 0) {
+      // Show abnormal items
+      statusText.textContent = `檢測到 ${data.count} 筆考勤異常`;
       
-      abnormalList.innerHTML = '';
+      // Add icon for warning state
+      statusIcon.textContent = '⚠️';
+      statusIcon.className = 'status-icon warning';
+      
       data.items.forEach(item => {
         const li = document.createElement('li');
-        li.textContent = item;
-        abnormalList.appendChild(li);
+        li.className = 'status-item warning';
+        li.innerHTML = `<span>•</span><span>${item}</span>`;
+        statusList.appendChild(li);
       });
       
       if (data.lastUpdated) {
         const date = new Date(data.lastUpdated);
-        lastUpdated.textContent = `更新於: ${date.toLocaleString()}`;
+        lastUpdated.textContent = `最後更新: ${date.toLocaleString('zh-TW')}`;
       }
     } else {
-      notificationArea.style.display = 'none';
+      // No issues found
+      statusText.textContent = '目前無異常';
+      
+      // Add success icon
+      statusIcon.textContent = '✓';
+      statusIcon.className = 'status-icon normal';
+      
+      const li = document.createElement('li');
+      li.className = 'status-item success';
+      li.innerHTML = `<span>✓</span><span>所有資料都是最新的</span>`;
+      statusList.appendChild(li);
+      
+      lastUpdated.textContent = '最後更新: ' + new Date().toLocaleString('zh-TW');
     }
+  }
+
+  // Enhanced status message system
+  function showStatusMessage(message, type = 'success') {
+    statusMsg.textContent = message;
+    statusMsg.className = `status-message ${type} show`;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      statusMsg.className = 'status-message';
+    }, 3000);
+  }
+
+  function clearStatusMessage() {
+    statusMsg.className = 'status-message';
   }
 
   // Scan Attendance Function
@@ -46,42 +87,42 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!tabs[0]) return;
 
       // Show loading state
-      lastUpdated.innerHTML = '正在更新... <div class="loading-spinner"></div>';
+      statusText.textContent = '正在檢查中...';
+      statusIcon.innerHTML = '<div class="loading-spinner"></div>';
+      statusIcon.className = 'status-icon';
 
       if (tabs[0].url && tabs[0].url.includes('hr.pesi.com.tw')) {
         chrome.tabs.sendMessage(tabs[0].id, { action: "scan_attendance" }, function(response) {
           if (chrome.runtime.lastError || !response || !response.data) {
             // If receiver missing (e.g., content script not yet injected), quietly fall back
-            lastUpdated.innerHTML = '嘗試備援掃描中... <div class="loading-spinner"></div>';
-            statusMsg.textContent = '訊息未送達，改用備援掃描';
-            statusMsg.style.color = '#ffc107';
+            statusText.textContent = '嘗試備援掃描中...';
             runFallbackScan(tabs[0].id);
             return;
           }
 
           const data = response.data;
-          updateNotificationUI(data);
+          updateStatusUI(data);
 
           if (data.count === 0) {
-            notificationArea.style.display = 'block'; 
-            abnormalCount.textContent = '0';
-            abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
-            lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
+            showStatusMessage('檢查完成 - 目前無異常', 'success');
+          } else {
+            showStatusMessage(`檢測到 ${data.count} 筆考勤異常`, 'warning');
           }
 
           chrome.storage.local.set({ 'pesi_notifications': data });
         });
       } else {
-        lastUpdated.textContent = "請前往 hr.pesi.com.tw 再試一次";
+        statusText.textContent = "請前往 hr.pesi.com.tw";
+        statusIcon.textContent = '⚠️';
+        statusIcon.className = 'status-icon warning';
       }
     });
   }
 
   function runFallbackScan(tabId) {
     if (!chrome.scripting) {
-      lastUpdated.textContent = "無法掃描，請重整頁面";
-      statusMsg.textContent = '掃描失敗：請在 HR 頁重整後再試';
-      statusMsg.style.color = '#dc3545';
+      lastUpdated.textContent = "無法掃描，請重新整理頁面";
+      showStatusMessage('掃描失敗：請在 HR 頁面重新整理後再試', 'error');
       return;
     }
 
@@ -146,20 +187,12 @@ document.addEventListener('DOMContentLoaded', function() {
           items: allIssues.slice(0,5),
           lastUpdated: Date.now()
         };
-        updateNotificationUI(data);
-        if (data.count === 0) {
-          notificationArea.style.display = 'block'; 
-          abnormalCount.textContent = '0';
-          abnormalList.innerHTML = '<li>✅ 目前無異常 (No issues found)</li>';
-          lastUpdated.textContent = '更新於: ' + new Date().toLocaleString();
-        }
+        updateStatusUI(data);
         chrome.storage.local.set({ 'pesi_notifications': data });
-        statusMsg.textContent = data.count > 0 ? `找到 ${data.count} 筆異常` : '掃描完成';
-        statusMsg.style.color = '#28a745';
+        showStatusMessage(data.count > 0 ? `找到 ${data.count} 筆異常` : '掃描完成', data.count > 0 ? 'warning' : 'success');
       } catch (e) {
-        lastUpdated.textContent = "備援掃描失敗，請重整 HR 頁面後再試";
-        statusMsg.textContent = '掃描失敗，請重整後再試';
-        statusMsg.style.color = '#dc3545';
+        lastUpdated.textContent = "備援掃描失敗";
+        showStatusMessage('掃描失敗，請重新整理 HR 頁面', 'error');
       }
     });
   }
@@ -177,11 +210,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial Load
     if (result.pesi_notifications) {
-      updateNotificationUI(result.pesi_notifications);
+      updateStatusUI(result.pesi_notifications);
+    } else {
+      // Initialize with loading state
+      statusText.textContent = 'Vérification en cours...';
+      statusIcon.innerHTML = '<div class="loading-spinner"></div>';
+      statusIcon.className = 'status-icon';
     }
 
     // Active Update on Open
-    scanAttendance();
+    setTimeout(scanAttendance, 1000);
   });
 
   // Save credentials function
@@ -192,8 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const extraUiEnabled = extraUiToggle.checked;
 
     if (!username || !password) {
-      statusMsg.textContent = '請輸入帳號與密碼 (Username and password required)';
-      statusMsg.style.color = '#dc3545';
+      showStatusMessage('請輸入員工代號與密碼', 'error');
       return;
     }
 
@@ -203,11 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
       pesi_auto_login_enabled: autoLoginEnabled,
       pesi_enable_extra_ui: extraUiEnabled
     }, function() {
-      statusMsg.textContent = '已儲存 (Saved)!';
-      statusMsg.style.color = '#28a745';
-      setTimeout(() => {
-        statusMsg.textContent = '';
-      }, 2000);
+      showStatusMessage('設定已儲存', 'success');
       if (callback) callback();
     });
   }
@@ -220,8 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Login button click
   loginBtn.addEventListener('click', function() {
     saveCredentials(function() {
-      statusMsg.textContent = '開啟 HR 頁面並自動登入中...';
-      statusMsg.style.color = '#28a745';
+      showStatusMessage('開啟 HR 頁面並自動登入中...', 'success');
       const targetUrl = 'https://hr.pesi.com.tw/HtmlWorkFlow/Index.html';
       
       chrome.tabs.query({url: "https://hr.pesi.com.tw/*"}, function(tabs) {
@@ -231,10 +263,17 @@ document.addEventListener('DOMContentLoaded', function() {
           chrome.tabs.create({url: targetUrl});
         }
         // Slight delay before close to allow status to show briefly
-        setTimeout(() => window.close(), 150);
+        setTimeout(() => window.close(), 200);
       });
     });
   });
+  
+  // Refresh button click
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function() {
+      scanAttendance();
+    });
+  }
   
   // About link opens repository in a new tab
   if (aboutLink) {

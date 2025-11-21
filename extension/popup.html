@@ -2,250 +2,554 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PESI HR Improver</title>
+  <title>PESI HR Helper</title>
   <style>
+    :root {
+      --md-sys-color-primary: #007bff;
+      --md-sys-color-primary-container: #e1f2ff;
+      --md-sys-color-secondary: #6c757d;
+      --md-sys-color-secondary-container: #eff7f3;
+      --md-sys-color-tertiary: #28a745;
+      --md-sys-color-tertiary-container: #e6f9ed;
+      --md-sys-color-error: #dc3545;
+      --md-sys-color-error-container: #fde2e2;
+      --md-sys-color-surface: #fafbfc;
+      --md-sys-color-surface-variant: #ffffff;
+      --md-sys-color-outline: #d4d7dc;
+      --md-sys-color-outline-variant: #eceff1;
+      --md-sys-elevation-level1: 0px 1px 3px rgba(0,0,0,0.12), 0px 1px 2px rgba(0,0,0,0.24);
+      --md-sys-elevation-level2: 0px 3px 6px rgba(0,0,0,0.16), 0px 3px 6px rgba(0,0,0,0.23);
+      --md-sys-elevation-level3: 0px 10px 20px rgba(0,0,0,0.19), 0px 6px 6px rgba(0,0,0,0.23);
+      --md-sys-radius-small: 8px;
+      --md-sys-radius-medium: 12px;
+      --md-sys-radius-large: 16px;
+      --md-typography-label-large: 14px 600;
+      --md-typography-label-medium: 12px 500;
+      --md-typography-body-medium: 14px 400;
+      --md-typography-headline-small: 20px 600;
+    }
+
     body {
-      width: 320px;
-      padding: 15px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f8f9fa;
+      width: 360px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-primary);
+      line-height: 1.5;
     }
-    .section {
-      background: white;
+
+    /* Header */
+    .app-header {
+      background: var(--md-sys-color-primary);
+      color: white;
+      padding: 16px 20px;
+      box-shadow: var(--md-sys-elevation-level2);
+    }
+
+    .app-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      font: var(--md-typography-headline-small);
+      color: white;
+    }
+
+    .app-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+
+    .app-subtitle {
+      font: var(--md-typography-label-medium);
+      color: rgba(255, 255, 255, 0.8);
+      margin: 4px 0 0 44px;
+    }
+
+    /* Main Content */
+    .main-container {
+      padding: 20px;
+    }
+
+    /* Status Card - First Priority */
+    .status-card {
+      background: var(--md-sys-color-surface-variant);
+      border-radius: var(--md-sys-radius-medium);
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      box-shadow: var(--md-sys-elevation-level1);
+    }
+
+    .status-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .status-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .status-icon.normal {
+      background: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-tertiary);
+    }
+
+    .status-icon.warning {
+      background: #fff8e1;
+      color: #f57c00;
+    }
+
+    .status-icon.error {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-error);
+    }
+
+    .status-title {
+      font: var(--md-typography-label-large);
+      color: var(--md-sys-color-primary);
+      margin: 0;
+    }
+
+    .status-content {
+      font: var(--md-typography-body-medium);
+      color: var(--md-sys-color-secondary);
+    }
+
+    .status-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0 0;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font: var(--md-typography-body-medium);
+      color: var(--md-sys-color-secondary);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .status-item:last-child {
+      border-bottom: none;
+    }
+
+    .status-item.success {
+      color: var(--md-sys-color-tertiary);
+    }
+
+    .status-item.warning {
+      color: #f57c00;
+    }
+
+    /* Card Sections */
+    .section-card {
+      background: var(--md-sys-color-surface-variant);
+      border-radius: var(--md-sys-radius-medium);
       padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      border: 1px solid #eef0f2;
-      margin-bottom: 10px;
+      margin-bottom: 16px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      box-shadow: var(--md-sys-elevation-level1);
+      transition: box-shadow 0.2s ease;
     }
+
+    /* Compact section for actions */
+    .section-card.actions-section {
+      padding: 12px 12px 8px 12px;
+    }
+
+    .section-card:hover {
+      box-shadow: var(--md-sys-elevation-level2);
+    }
+
     .section-title {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: #495057;
-      font-weight: 700;
+      gap: 8px;
+      font: var(--md-typography-label-large);
+      color: var(--md-sys-color-primary);
       margin: 0 0 8px 0;
       text-transform: uppercase;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.5px;
     }
-    .hint {
-      font-size: 11px;
-      color: #6c757d;
-      margin-top: 4px;
-    }
-    h1 {
-      font-size: 18px;
-      margin-top: 0;
-      color: #007bff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    h1 img {
-      width: 24px;
-      height: 24px;
-    }
-    .card {
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      margin-bottom: 10px;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      color: #6c757d;
-      margin-bottom: 4px;
-    }
-    input[type="text"], input[type="password"] {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-    button {
-      width: 100%;
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-    #save-btn {
-      background-color: #e9ecef;
-      color: #495057;
-      margin-bottom: 10px;
-    }
-    #save-btn:hover {
-      background-color: #dee2e6;
-    }
-    #login-btn {
-      background-color: #007bff;
-      color: white;
-      font-size: 14px;
-      padding: 10px;
-    }
-    #login-btn:hover {
-      background-color: #0056b3;
-    }
-    .status {
-      font-size: 12px;
-      color: #28a745;
-      text-align: center;
-      height: 16px;
-      margin-bottom: 5px;
-    }
-    .notification-card {
-      display: none;
-      background: #fffaf1;
-      border: 1px solid #ffe2a8;
-      color: #6c4c00;
-      padding: 10px 12px;
-      border-radius: 10px;
+
+    /* Compact title for actions section */
+    .actions-section .section-title {
+      margin: 0 0 6px 0;
       font-size: 13px;
     }
-    .notification-header {
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 5px;
+
+    /* Input Fields */
+    .input-group {
+      margin-bottom: 16px;
     }
-    .notification-list {
-      margin: 6px 0 0 0;
-      padding-left: 16px;
+
+    .input-label {
+      display: block;
+      font: var(--md-typography-label-medium);
+      color: var(--md-sys-color-secondary);
+      margin-bottom: 6px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--md-sys-color-outline);
+      border-radius: var(--md-sys-radius-small);
+      background: var(--md-sys-color-surface-variant);
+      font: var(--md-typography-body-medium);
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--md-sys-color-primary);
+      border-width: 2px;
+      background: white;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+    }
+
+    .input-field::placeholder {
+      color: #9e9e9e;
+    }
+
+    /* Toggle Switches */
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--md-sys-color-outline);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+      box-shadow: var(--md-sys-elevation-level1);
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--md-sys-color-primary);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .toggle-label {
+      font: var(--md-typography-body-medium);
+      color: var(--md-sys-color-secondary);
+      flex: 1;
+    }
+
+    /* Buttons */
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: stretch;
+    }
+
+    .btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: var(--md-sys-radius-small);
+      font: var(--md-typography-label-large);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: var(--md-sys-elevation-level1);
+      font-size: 13px;
+      font-weight: 600;
+      min-height: 44px;
+    }
+
+    .btn-primary {
+      background: var(--md-sys-color-primary);
+      color: white;
+      flex: 1.4;
+      min-width: 120px;
+    }
+
+    .btn-primary:hover {
+      background: #0056b3;
+      box-shadow: var(--md-sys-elevation-level2);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-secondary);
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .btn-secondary:hover {
+      background: #e9ecef;
+      color: var(--md-sys-color-primary);
+      box-shadow: var(--md-sys-elevation-level2);
+    }
+
+    /* Action button text optimization */
+    .btn-text {
       font-size: 12px;
+      line-height: 1.2;
     }
-    .notification-list li {
-      margin-bottom: 3px;
+
+    .btn-text .main-text {
+      display: block;
+      font-weight: 700;
     }
-    .refresh-hint {
+
+    .btn-text .sub-text {
+      display: block;
       font-size: 10px;
-      color: #6c757d;
-      text-align: right;
-      margin-top: 5px;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 5px;
+      opacity: 0.8;
+      font-weight: 400;
     }
+
+    /* Status Messages */
+    .status-message {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: var(--md-sys-radius-small);
+      font: var(--md-typography-body-medium);
+      text-align: center;
+      min-height: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .status-message.show {
+      opacity: 1;
+    }
+
+    .status-message.success {
+      background: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-tertiary);
+      border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+
+    .status-message.error {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-error);
+      border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+
+    .status-message.warning {
+      background: #fff8e1;
+      color: #f57c00;
+      border: 1px solid rgba(245, 124, 0, 0.2);
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Hint Text */
+    .hint-text {
+      font: var(--md-typography-label-medium);
+      color: var(--md-sys-color-secondary);
+      margin-top: 6px;
+      opacity: 0.8;
+    }
+
+    /* Footer */
+    .app-footer {
+      padding: 16px 20px;
+      background: var(--md-sys-color-outline-variant);
+      text-align: center;
+      border-top: 1px solid var(--md-sys-color-outline);
+    }
+
+    .version-text {
+      font: var(--md-typography-label-medium);
+      color: var(--md-sys-color-outline);
+      margin-bottom: 8px;
+    }
+
+    .about-link {
+      font: var(--md-typography-label-medium);
+      color: var(--md-sys-color-primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .about-link:hover {
+      color: #0056b3;
+      text-decoration: underline;
+    }
+
+    /* Refresh Button */
     .refresh-btn {
       background: none;
       border: none;
-      color: #007bff;
+      color: var(--md-sys-color-primary);
       cursor: pointer;
-      padding: 0;
-      font-size: 10px;
-      text-decoration: underline;
-    }
-    .loading-spinner {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border: 2px solid rgba(0,0,0,0.1);
-      border-radius: 50%;
-      border-top-color: #007bff;
-      animation: spin 1s ease-in-out infinite;
-      margin-left: 5px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-direction: column;
-    }
-    .row {
-      display: flex;
-      gap: 8px;
-    }
-    .row > * {
-      flex: 1;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
       padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
+      border-radius: 4px;
+      font: var(--md-typography-label-medium);
+      transition: background 0.2s ease;
     }
-    .badge-success {
-      background: #e7f6ec;
-      color: #1e8b45;
-    }
-    .badge-warning {
-      background: #fff4e5;
-      color: #b36b00;
+
+    .refresh-btn:hover {
+      background: var(--md-sys-color-primary-container);
     }
   </style>
 </head>
 <body>
-  <h1>
-    <img src="icons/icon48.png" alt="Logo">
-    PESI HR Helper
-  </h1>
-  
-  <div class="section">
-    <div class="section-title">考勤異常通知</div>
-    <div id="notification-area" class="notification-card">
-      <div class="notification-header">
-        <span>⚠️ 考勤異常</span>
-        <span id="abnormal-count" class="badge badge-warning">0</span>
-      </div>
-      <ul id="abnormal-list" class="notification-list">
-        <!-- Items will be injected here -->
-      </ul>
-      <div class="refresh-hint">
-        <span id="last-updated"></span>
-        <button id="refresh-notification-btn" class="refresh-btn">🔄 重新掃描</button>
-      </div>
-    </div>
-  </div>
+  <!-- Header -->
+  <header class="app-header">
+    <h1 class="app-title">
+      <img src="icons/icon48.png" alt="PESI Logo" class="app-logo">
+      PESI HR Helper
+    </h1>
+    <p class="app-subtitle">HR 系統優化工具</p>
+  </header>
 
-  <div class="section">
-    <div class="section-title">帳號</div>
-    <label for="username">員工代號 (User ID)</label>
-    <input type="text" id="username" placeholder="ex: A123">
+  <!-- Main Content -->
+  <main class="main-container">
     
-    <label for="password">密碼 (Password)</label>
-    <input type="password" id="password" placeholder="Password">
-  </div>
+    <!-- Status Card - First Priority -->
+    <section class="status-card" id="status-section">
+      <div class="status-card-header">
+        <div class="status-icon" id="status-icon">✓</div>
+        <h3 class="status-title">考勤異常通知</h3>
+      </div>
+      <div class="status-content">
+        <div id="notification-area">
+          <div id="status-text">正在檢查中...</div>
+          <ul class="status-list" id="status-list">
+            <!-- Items will be injected here -->
+          </ul>
+        </div>
+        <div class="hint-text">
+          <span id="last-updated">最後更新: --</span>
+          <button id="refresh-notification-btn" class="refresh-btn">🔄 重新掃描</button>
+        </div>
+      </div>
+    </section>
 
-  <div class="section">
-    <div class="section-title">設定</div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#495057;">
-      <input type="checkbox" id="auto-login-toggle" style="width:auto;margin:0;">
-      啟用自動登入 (Auto-login on HR site)
-    </label>
+    <!-- Configuration Card -->
+    <section class="section-card">
+      <h3 class="section-title">⚙️ 帳號設定</h3>
+      
+      <div class="input-group">
+        <label class="input-label" for="username">👤 員工代號 (User ID)</label>
+        <input type="text" id="username" class="input-field" placeholder="ex: A123">
+      </div>
 
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#495057;">
-      <input type="checkbox" id="extra-ui-toggle" style="width:auto;margin:0;">
-      顯示進階工具 (Analyzer/模板)
-    </label>
-    <div class="hint">建議進階工具保持關閉，除非需要分析表單或模板功能。</div>
-  </div>
+      <div class="input-group">
+        <label class="input-label" for="password">🔒 密碼 (Password)</label>
+        <input type="password" id="password" class="input-field" placeholder="Password">
+      </div>
 
-  <div class="section">
-    <div class="section-title">動作</div>
-    <div id="status-msg" class="status"></div>
-    <div class="actions">
-      <button id="save-btn">💾 儲存設定 (Save)</button>
-      <button id="login-btn">🚀 一鍵登入 (Login)</button>
-    </div>
-  </div>
+      <div class="toggle-group">
+        <label class="toggle-switch">
+          <input type="checkbox" id="auto-login-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">啟用自動登入 (Auto-login on HR site)</span>
+      </div>
 
-  <div id="version" style="font-size: 11px; color: #adb5bd; text-align: center;"></div>
-  <div style="text-align:center; font-size:11px; color: #6c757d; margin-top:6px;">
-    <a id="about-link" href="#" style="color: #6c757d; text-decoration: none;">ℹ️ About (GitHub)</a>
-  </div>
+      <div class="toggle-group">
+        <label class="toggle-switch">
+          <input type="checkbox" id="extra-ui-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">顯示進階工具 (Analyzer/模板)</span>
+      </div>
+      <div class="hint-text">建議進階工具保持關閉，除非需要分析表單或模板功能。</div>
+    </section>
+
+    <!-- Actions Card -->
+    <section class="section-card actions-section">
+      <h3 class="section-title">🚀 動作</h3>
+      
+      <div id="status-msg" class="status-message"></div>
+      
+      <div class="button-group">
+        <button id="save-btn" class="btn btn-secondary">
+          <div class="btn-text">
+            <span class="main-text">💾 儲存設定</span>
+            <span class="sub-text">Save</span>
+          </div>
+        </button>
+        <button id="login-btn" class="btn btn-primary">
+          <div class="btn-text">
+            <span class="main-text">🚀 一鍵登入</span>
+            <span class="sub-text">Login</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="version-text" id="version">v0.0.0</div>
+    <a id="about-link" href="#" class="about-link">ℹ️ À propos (GitHub)</a>
+  </footer>
+
   <script src="popup.js"></script>
 </body>
 </html>
