@@ -24,26 +24,38 @@ const path = require('path');
       await page.goto(url, {waitUntil: 'networkidle0'});
       await page.setViewport({width: 1200, height: 900});
 
-      // Targeted masking: find elements containing '附加檔案' or input[type=file] and replace innerHTML with placeholder
+      // Safer masking: hide file inputs and replace small/label-like nodes that mention attachments only
       await page.evaluate((employee) => {
-        // Hide file inputs and replace blocks with placeholder
-        document.querySelectorAll('input[type=file]').forEach(el => { el.style.display = 'none'; });
+        try {
+          // Hide file inputs
+          document.querySelectorAll('input[type=file]').forEach(el => { el.style.display = 'none'; });
 
-        // Replace any element that contains the phrase '附加檔案' or '附件' in text
-        Array.from(document.querySelectorAll('*')).forEach(el => {
-          try {
-            const txt = (el.textContent || '').trim();
-            if (txt && (txt.includes('附加檔案') || txt.includes('附件') || txt.includes('附檔'))) {
-              el.innerHTML = '<div style="font-size:12px;color:#666;padding:6px;">(附件已隱藏)</div>';
-              el.style.minHeight = '36px';
-              el.style.border = '1px dashed #ccc';
-            }
-          } catch(e){}
-        });
+          // Find candidate nodes that likely represent attachment labels or small blocks
+          const candidates = Array.from(document.querySelectorAll('label,span,div,p'));
+          candidates.forEach(el => {
+            try {
+              const txt = (el.textContent || '').trim();
+              if (!txt) return;
+              // only target nodes that mention attachment keywords and are relatively small in text length
+              if ((txt.includes('附加檔案') || txt.includes('附件') || txt.includes('附檔')) && txt.length < 120) {
+                // protect against replacing the whole document: skip if element is body/html or large container
+                const tag = (el.tagName || '').toLowerCase();
+                if (tag === 'body' || tag === 'html') return;
+                const rect = el.getBoundingClientRect();
+                // only replace if element visual area is reasonable (not huge)
+                if (rect.width > 50 && rect.height > 8 && rect.width < 1200 && rect.height < 800) {
+                  el.innerHTML = '<div style="font-size:12px;color:#666;padding:6px;">(附件已隱藏)</div>';
+                  el.style.minHeight = '36px';
+                  el.style.border = '1px dashed #ccc';
+                }
+              }
+            } catch(e){}
+          });
 
-        // update employee fields
-        const emNo = document.getElementById('em_no'); if (emNo) emNo.value = employee.id;
-        const emName = document.getElementById('em_name'); if (emName) emName.innerText = employee.name;
+          // update employee fields if simple ids exist
+          const emNo = document.getElementById('em_no'); if (emNo) { try { emNo.value = employee.id; } catch(e){} }
+          const emName = document.getElementById('em_name'); if (emName) { try { emName.innerText = employee.name; } catch(e){} }
+        } catch(e){}
       }, p.employee);
 
       // Small delay then take full page screenshot
