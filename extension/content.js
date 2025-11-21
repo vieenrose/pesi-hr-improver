@@ -232,6 +232,19 @@ function hideSmallVisualArtifacts() {
 
         candidates.forEach(el => {
             try {
+                // Skip elements that are part of known interactive widgets
+                // (datepicker/calendar widgets, or site-specific pickers like sact_datetimepicker).
+                // Hiding parts of these widgets causes the calendar to appear empty.
+                let anc = el;
+                while (anc) {
+                    const cid = (anc.className || '').toString();
+                    const iid = (anc.id || '').toString();
+                    if (/date|picker|calendar|sact|ui-datepicker/i.test(cid) || /date|picker|calendar|sact|ui-datepicker/i.test(iid)) {
+                        return; // skip this element
+                    }
+                    anc = anc.parentElement;
+                }
+
                 const r = el.getBoundingClientRect();
                 // Ignore elements outside viewport
                 if (r.right < 0 || r.left > viewport.w || r.bottom < 0 || r.top > viewport.h) return;

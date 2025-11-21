@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PESI HR UI/UX Improver",
-    "version": "0.3.30",
+    "version": "0.3.32",
 
   "description": "專為百一電子 (PESI Electronics) 員工設計的 HR 系統優化工具，提供一鍵填寫、智慧標籤與即時時數計算功能。",
   "icons": {
