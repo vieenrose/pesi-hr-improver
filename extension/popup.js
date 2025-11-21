@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const statusMsg = document.getElementById('status-msg');
   const autoLoginToggle = document.getElementById('auto-login-toggle');
   const extraUiToggle = document.getElementById('extra-ui-toggle');
+  const savePasswordToggle = document.getElementById('save-password-toggle');
+  const forgetPasswordBtn = document.getElementById('forget-password-btn');
   
   // New UI Elements for Material Design 3
   const statusSection = document.getElementById('status-section');
@@ -221,12 +223,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Load saved credentials and notifications
-  chrome.storage.local.get(['pesi_username', 'pesi_password', 'pesi_notifications', 'pesi_auto_login_enabled', 'pesi_enable_extra_ui'], function(result) {
+  chrome.storage.local.get(['pesi_username', 'pesi_password', 'pesi_password_saved', 'pesi_notifications', 'pesi_auto_login_enabled', 'pesi_enable_extra_ui'], function(result) {
     if (result.pesi_username) {
       usernameInput.value = result.pesi_username;
     }
-    if (result.pesi_password) {
+    // Only pre-fill password if it was explicitly saved by the user (opt-in)
+    if (result.pesi_password && result.pesi_password_saved) {
       passwordInput.value = result.pesi_password;
+      if (savePasswordToggle) savePasswordToggle.checked = true;
+    } else if (savePasswordToggle) {
+      savePasswordToggle.checked = false;
     }
     autoLoginToggle.checked = result.pesi_auto_login_enabled !== false; // default true
     extraUiToggle.checked = !!result.pesi_enable_extra_ui;
@@ -251,24 +257,46 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Forget saved password button
+  if (forgetPasswordBtn) {
+    forgetPasswordBtn.addEventListener('click', function() {
+      chrome.storage.local.remove(['pesi_password','pesi_password_saved'], function() {
+        passwordInput.value = '';
+        if (savePasswordToggle) savePasswordToggle.checked = false;
+        showStatusMessage('已移除儲存的密碼', 'success');
+      });
+    });
+  }
+
   // Save credentials function
   function saveCredentials(callback) {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     const autoLoginEnabled = autoLoginToggle.checked;
     const extraUiEnabled = extraUiToggle.checked;
+    const savePassword = savePasswordToggle ? savePasswordToggle.checked : false;
 
     if (!username || !password) {
       showStatusMessage('請輸入員工代號與密碼', 'error');
       return;
     }
 
-    chrome.storage.local.set({
+    // Prepare storage payload; only include password if user opted in
+    const payload = {
       pesi_username: username,
-      pesi_password: password,
       pesi_auto_login_enabled: autoLoginEnabled,
       pesi_enable_extra_ui: extraUiEnabled
-    }, function() {
+    };
+    if (savePassword && password) {
+      payload.pesi_password = password;
+      payload.pesi_password_saved = true;
+    } else {
+      payload.pesi_password_saved = false;
+    }
+
+    chrome.storage.local.set(payload, function() {
+      // If user did not opt in, ensure any previously stored password is removed
+      if (!savePassword) chrome.storage.local.remove('pesi_password');
       showStatusMessage('設定已儲存', 'success');
       if (callback) callback();
     });
