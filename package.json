@@ -1,0 +1,11 @@
+{
+  "name": "pesi-hr-screenshot-temp",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "regen-screens": "node tools/regenerate_screenshots.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.1"
+  }
+}

@@ -163,40 +163,66 @@ function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
         .filter((opt, index, arr) => arr.findIndex(o => o.text === opt.text) === index)
         .slice(0, 8); // Limit to 8 chips
 
-    // Create Chips
+    // Create Chips (accessible + keyboard support)
     allOptions.forEach(option => {
         const chip = document.createElement('button');
         chip.textContent = option.text;
         chip.type = 'button';
         chip.className = 'pesi-chip';
+
+        // Accessibility
+        chip.setAttribute('role', 'button');
+        chip.tabIndex = 0;
+        chip.setAttribute('aria-pressed', 'false');
+
+        // Keyboard support
+        chip.addEventListener('keydown', (ke) => {
+            if (ke.key === 'Enter' || ke.key === ' ') {
+                ke.preventDefault();
+                chip.click();
+            }
+        });
+
         chip.onclick = (e) => {
             e.preventDefault();
-            
+
             // Re-fetch input to ensure we have the latest reference
             const currentInput = document.getElementById(inputId) || input;
 
             if (currentInput.tagName === 'SELECT') {
-                let found = false;
-                for (let i = 0; i < currentInput.options.length; i++) {
-                    const opt = currentInput.options[i];
-                    if (opt.text.trim().includes(option.text)) {
-                        // SIMPLIFIED: Just set selectedIndex. 
-                        // Don't touch .selected property manually to avoid fighting the browser.
-                        currentInput.selectedIndex = i;
-                        currentInput.value = opt.value;
-                        found = true;
-                        break;
+                // Prefer exact value match when a value is provided
+                let applied = false;
+                if (option.value) {
+                    const optByValue = currentInput.querySelector(`option[value="${option.value}"]`);
+                    if (optByValue) {
+                        currentInput.value = option.value;
+                        applied = true;
                     }
                 }
-                if (!found) {
+
+                if (!applied) {
+                    // Fallback: match by visible text (contains)
+                    for (let i = 0; i < currentInput.options.length; i++) {
+                        const opt = currentInput.options[i];
+                        if (opt.text.trim().includes(option.text)) {
+                            currentInput.selectedIndex = i;
+                            currentInput.value = opt.value;
+                            applied = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!applied) {
                     console.warn(`Pesi Extension: Option '${option.text}' not found.`);
-                    return; 
+                    return;
                 }
             } else {
                 currentInput.value = option.value;
             }
-            
+
             // Visual Feedback
+            chip.setAttribute('aria-pressed', 'true');
             const originalBg = currentInput.style.backgroundColor;
             currentInput.style.transition = 'background-color 0.2s';
             currentInput.style.backgroundColor = '#fff3cd';
@@ -206,8 +232,11 @@ function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
             // the page's scripts (Postback) kick in and potentially refresh the area.
             setTimeout(() => {
                 triggerChange(currentInput);
+                // reset aria-pressed after action
+                setTimeout(() => chip.setAttribute('aria-pressed', 'false'), 500);
             }, 50);
         };
+
         container.appendChild(chip);
     });
 
@@ -471,14 +500,34 @@ function addQuickTimeButtons(inputId) {
     timeField.className = 'pesi-md3-text-field';
     timeField.innerHTML = `
         <input class="pesi-md3-input" id="time-input-${inputId}" type="time" value="${input.value}">
-        <label class="pesi-md3-label" for="time-input-${inputId}">Time</label>
+        <label class="pesi-md3-label" for="time-input-${inputId}">時間</label>
         <div class="pesi-md3-outline"></div>
     `;
 
     // Sync changes back to original input
-    timeField.querySelector('input').addEventListener('change', () => {
-        input.value = timeField.querySelector('input').value;
+    const md3Input = timeField.querySelector('input');
+
+    // When the MD3 input value changes, propagate to original input
+    md3Input.addEventListener('change', () => {
+        input.value = md3Input.value;
         triggerChange(input);
+    });
+
+    // Make clicking the whole field open the native picker where possible
+    timeField.addEventListener('click', (e) => {
+        // If the click was directly on the native input, let it behave normally
+        if (e.target === md3Input) return;
+        try {
+            if (typeof md3Input.showPicker === 'function') {
+                md3Input.showPicker();
+                return;
+            }
+        } catch (err) {
+            // ignore
+        }
+        // Fallback: focus + click to attempt to open the native control
+        md3Input.focus();
+        try { md3Input.click(); } catch (_) {}
     });
 
     container.appendChild(timeField);

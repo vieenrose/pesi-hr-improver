@@ -16,7 +16,9 @@
 
 | 快速登入與異常通知 (Login & Alerts) | 請假申請 (Leave Application) | 公出申請 (Business Trip) |
 |:---:|:---:|:---:|
-| <img src="extension/screenshots/popup_panel.png" width="250"> | <img src="extension/screenshots/leave_application.png" width="250"> | <img src="extension/screenshots/business_trip_application.png" width="250"> |
+| <img src="extension/screenshots/popup-panel.png" width="280"> | <img src="extension/screenshots/debug_real_leave_nomask.png" width="280"> | <img src="extension/screenshots/debug_real_trip_nomask.png" width="280"> |
+
+<!-- MD3 time picker and smart-chips screenshots removed per request -->
 
 ---
 
