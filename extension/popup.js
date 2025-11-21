@@ -20,8 +20,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const refreshBtn = document.getElementById('refresh-notification-btn');
   const aboutLink = document.getElementById('about-link');
 
+  // UX controls for status list
+  const MAX_VISIBLE = 5;
+  let lastNotificationData = null;
+  let statusShowAll = false;
+
   // Enhanced Status Management
   function updateStatusUI(data) {
+    lastNotificationData = data;
     if (!data) {
       showStatusMessage('獲取資料時發生錯誤', 'error');
       return;
@@ -38,18 +44,35 @@ document.addEventListener('DOMContentLoaded', function() {
       statusIcon.textContent = '⚠️';
       statusIcon.className = 'status-icon warning';
       
-      data.items.forEach(item => {
+      const itemsToShow = statusShowAll ? data.items : data.items.slice(0, MAX_VISIBLE);
+      itemsToShow.forEach(item => {
         const li = document.createElement('li');
         li.className = 'status-item warning';
-        li.innerHTML = `<span>•</span><span>${item}</span>`;
+        li.innerHTML = `<span>•</span><span class="item-text">${item}</span>`;
         statusList.appendChild(li);
       });
+      if (data.items.length > MAX_VISIBLE) {
+        const remaining = data.items.length - MAX_VISIBLE;
+        const showMoreLi = document.createElement('li');
+        showMoreLi.className = 'status-item show-more';
+        const btn = document.createElement('button');
+        btn.className = 'show-more-btn';
+        btn.textContent = statusShowAll ? '顯示較少' : `顯示更多 (${remaining})`;
+        btn.addEventListener('click', function() {
+          statusShowAll = !statusShowAll;
+          updateStatusUI(lastNotificationData);
+        });
+        showMoreLi.appendChild(btn);
+        statusList.appendChild(showMoreLi);
+      }
       
       if (data.lastUpdated) {
         const date = new Date(data.lastUpdated);
         lastUpdated.textContent = `最後更新: ${date.toLocaleString('zh-TW')}`;
       }
     } else {
+      // reset list expansion when no items
+      statusShowAll = false;
       // No issues found
       statusText.textContent = '目前無異常';
       
@@ -213,13 +236,19 @@ document.addEventListener('DOMContentLoaded', function() {
       updateStatusUI(result.pesi_notifications);
     } else {
       // Initialize with loading state
-      statusText.textContent = 'Vérification en cours...';
+      statusText.textContent = '正在檢查中...';
       statusIcon.innerHTML = '<div class="loading-spinner"></div>';
       statusIcon.className = 'status-icon';
     }
 
-    // Active Update on Open
-    setTimeout(scanAttendance, 1000);
+    // Active Update on Open: only auto-scan when user is on HR site
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs[0] && tabs[0].url && tabs[0].url.includes('hr.pesi.com.tw')) {
+        setTimeout(scanAttendance, 1000);
+      } else {
+        statusText.textContent = '請在 HR 頁面使用掃描 (或按重新掃描)';
+      }
+    });
   });
 
   // Save credentials function

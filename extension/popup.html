@@ -130,6 +130,9 @@
       list-style: none;
       padding: 0;
       margin: 8px 0 0 0;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 6px;
     }
 
     .status-item {
@@ -169,6 +172,12 @@
     .section-card.actions-section {
       padding: 12px 12px 8px 12px;
     }
+
+    /* Compact actions - reduce vertical footprint */
+    .actions-section .button-group { gap: 6px; }
+    .actions-section .btn { padding: 8px 10px; min-height: 36px; font-size: 12px; }
+    .actions-section .btn-primary { min-width: 100px; }
+    .actions-section .btn-secondary { min-width: 84px; }
 
     .section-card:hover {
       box-shadow: var(--md-sys-elevation-level2);
@@ -377,6 +386,12 @@
       border: 1px solid rgba(40, 167, 69, 0.2);
     }
 
+    /* Truncation for list items, expand via JS toggles */
+    .status-item .item-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .status-item.expanded .item-text { white-space: normal; }
+    .status-item.show-more { cursor: pointer; text-align: center; }
+    .status-item .show-more-btn { background: none; border: none; color: var(--md-sys-color-primary); cursor: pointer; padding: 6px 8px; }
+
     .status-message.error {
       background: var(--md-sys-color-error-container);
       color: var(--md-sys-color-error);
@@ -476,7 +491,7 @@
       </div>
       <div class="status-content">
         <div id="notification-area">
-          <div id="status-text">正在檢查中...</div>
+          <div id="status-text" role="status" aria-live="polite">正在檢查中...</div>
           <ul class="status-list" id="status-list">
             <!-- Items will be injected here -->
           </ul>
