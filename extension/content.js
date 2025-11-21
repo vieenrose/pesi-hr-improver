@@ -453,30 +453,29 @@ function addQuickTimeButtons(inputId) {
     const containerId = `pesi-actions-${inputId}`;
     if (document.getElementById(containerId)) return;
 
-    const container = document.createElement('span');
+    const container = document.createElement('div');
     container.id = containerId;
-    container.className = 'pesi-quick-actions';
+    container.className = 'pesi-md3-time-container';
 
-    let times = ['09:00', '13:00', '18:00'];
+    // Create MD3 time input field
+    const timeField = document.createElement('div');
+    timeField.className = 'pesi-md3-text-field';
+    timeField.innerHTML = `
+        <input class="pesi-md3-input" id="time-input-${inputId}" type="time" value="${input.value}">
+        <label class="pesi-md3-label" for="time-input-${inputId}">Time</label>
+        <div class="pesi-md3-outline"></div>
+    `;
 
-    // Customize times based on input type
-    if (inputId === 'from_time') {
-        // Add 08:00 for Start Time
-        times = ['08:00', '09:00', '13:00', '18:00'];
-    } else if (inputId === 'to_time') {
-        // Add 10:00 for End Time
-        times = ['09:00', '10:00', '13:00', '18:00'];
-    }
-    
-    times.forEach(time => {
-        const btn = createActionButton(time, () => {
-            input.value = time;
-            triggerChange(input);
-        });
-        container.appendChild(btn);
+    // Sync changes back to original input
+    timeField.querySelector('input').addEventListener('change', () => {
+        input.value = timeField.querySelector('input').value;
+        triggerChange(input);
     });
 
+    container.appendChild(timeField);
+
     input.parentNode.insertBefore(container, input.nextSibling);
+    input.style.display = 'none'; // Hide original input
 }
 
 function createActionButton(text, onClick) {
