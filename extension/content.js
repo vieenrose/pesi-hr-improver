@@ -289,6 +289,13 @@ function isHrDomain() {
     return location.hostname.includes('hr.pesi.com.tw');
 }
 
+function uiInjectLeaveFormValue(){
+  let reason = document.getElementById("reason");
+  if (reason){
+    reason.value = "私事處理";
+  }
+}
+
 // Function to initialize improvements when a target form is detected
 function initImprovements() {
     if (!isHrDomain()) {
@@ -336,6 +343,7 @@ function isLeaveContext() {
     const bodyText = document.body.textContent || '';
     const isLeaveUrl = url.includes("SW0029");
     const isLeaveText = bodyText.includes("請假申請") || title.includes("請假申請") || bodyText.includes("Leave Application");
+    uiInjectLeaveFormValue();
     return isLeaveUrl || isLeaveText;
 }
 
