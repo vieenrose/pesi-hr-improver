@@ -93,7 +93,7 @@
 *   **Tech Stack**: Vanilla JavaScript (ES6+), CSS3, Chrome Extension Manifest V3
 *   **Core Logic**: DOM Manipulation, MutationObserver
 *   **Compatibility**: Google Chrome, Microsoft Edge
-*   **Latest Version**: 0.3.26
+*   **Latest Version**: 0.3.30
 *   **Recent Updates**: 
     *   Material Design 3 time picker implementation
     *   Fixed leave type auto-filler with correct ID mappings
