@@ -62,6 +62,228 @@ function debounce(fn, wait = 300) {
     };
 }
 
+// Inject small runtime CSS fixes that correct layout issues without altering
+// the original saved HTML. This keeps modifications non-destructive for end users.
+function injectRuntimeCssFixes() {
+    try {
+        const css = `
+        /* Ensure the cross_holiday checkbox aligns with its label and does not overlap the reason field */
+        input#cross_holiday {
+            position: static !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
+            margin: 0 8px 0 0 !important;
+        }
+        label[for="cross_holiday"] {
+            vertical-align: middle !important;
+            margin-left: 4px !important;
+        }
+        /* Container for relocated checkbox clones */
+        .pesi-relocated-checkboxes {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            align-items: center !important;
+            margin-top: 6px !important;
+            z-index: 2147483630 !important;
+            background: transparent !important;
+        }
+        /* Force the paragraph containing the checkbox to clear floats so it sits below preceding inline elements */
+        #use_ab_time_p, p#use_ab_time_p, input#cross_holiday ~ label {
+            clear: both !important;
+        }
+        `;
+
+        const style = document.createElement('style');
+        style.setAttribute('data-pesi-fix', 'checkbox-layout');
+        style.appendChild(document.createTextNode(css));
+        // Prepend to head so it's applied before other rules where possible
+        const parent = document.head || document.documentElement;
+        parent.insertBefore(style, parent.firstChild);
+    } catch (e) {
+        console.warn('PESI: failed to inject runtime CSS fixes', e);
+    }
+}
+
+// Non-destructive runtime DOM relocation for collocated checkbox groups.
+// This moves the nearest common ancestor of the known checkbox IDs to a
+// stable position after the `#reason` field so it no longer visually
+// overlaps other inputs in saved HTML snapshots. The operation is idempotent
+// (marks the moved node with a data attribute) and avoids editing saved files.
+function relocateCheckboxParagraphs() {
+    try {
+        const checkboxIds = ['cross_holiday', 'fix_time', 'use_ab_time'];
+        const checks = checkboxIds.map(id => document.getElementById(id)).filter(Boolean);
+        if (checks.length === 0) return false;
+
+        // Find the nearest common ancestor that contains all checkboxes
+        const ancestors = (el) => {
+            const a = [];
+            while (el) { a.push(el); el = el.parentElement; }
+            return a;
+        };
+
+        let common = null;
+        const firstAnc = ancestors(checks[0]);
+        for (const anc of firstAnc) {
+            if (checks.every(e => anc.contains(e))) { common = anc; break; }
+        }
+        if (!common) {
+            // fallback will try a more surgical relocation
+        } else {
+            // Avoid moving document-level containers and prefer a P/DIV/TD/FIELDSET container
+            if (['BODY', 'HTML', 'FORM'].includes(common.tagName)) {
+                common = checks[0].closest('p,div,td,fieldset') || common;
+            }
+
+            if (common && !(common.dataset && common.dataset.pesiRelocated)) {
+                const reason = document.getElementById('reason');
+                if (reason) {
+                    try {
+                        if (!(reason.compareDocumentPosition(common) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                            const target = reason.parentNode || reason;
+                            if (target && target.parentNode) {
+                                if (target.nextSibling) target.parentNode.insertBefore(common, target.nextSibling);
+                                else target.parentNode.appendChild(common);
+                            } else {
+                                if (reason.nextSibling) reason.parentNode.insertBefore(common, reason.nextSibling);
+                                else reason.parentNode.appendChild(common);
+                            }
+                        }
+                        common.dataset.pesiRelocated = '1';
+                        return true;
+                    } catch (e) {
+                        // continue to fallback below
+                    }
+                }
+            }
+        }
+
+        // Fallback strategy: create a new container and clone the checkbox wrappers
+        try {
+            const reason = document.getElementById('reason');
+            if (!reason) return false;
+
+            // Find reasonable wrapper elements for each checkbox (label/p/td/div/span)
+            const wrappers = [];
+            checks.forEach(cb => {
+                const w = cb.closest('label, p, td, div, span') || cb.parentElement;
+                if (w && !wrappers.includes(w)) wrappers.push(w);
+            });
+            if (wrappers.length === 0) return false;
+
+            // If we've already created a relocated container, skip
+            if (document.querySelector('.pesi-relocated-checkboxes')) return true;
+
+            const newContainer = document.createElement('div');
+            newContainer.className = 'pesi-relocated-checkboxes';
+            newContainer.dataset.pesiRelocated = '1';
+
+            wrappers.forEach(w => {
+                try {
+                    const clone = w.cloneNode(true);
+                    newContainer.appendChild(clone);
+                    // hide original wrapper visually but keep in DOM for forms that may read values
+                    w.style.visibility = 'hidden';
+                    w.dataset.pesiRelocatedOriginal = '1';
+                } catch (e) { /* continue */ }
+            });
+
+            // Insert after reason's container
+            const target = reason.parentNode || reason;
+            if (target && target.parentNode) {
+                if (target.nextSibling) target.parentNode.insertBefore(newContainer, target.nextSibling);
+                else target.parentNode.appendChild(newContainer);
+            } else {
+                if (reason.nextSibling) reason.parentNode.insertBefore(newContainer, reason.nextSibling);
+                else reason.parentNode.appendChild(newContainer);
+            }
+
+            return true;
+        } catch (e) {
+            console.warn('PESI: relocate fallback failed', e);
+            return false;
+        }
+    } catch (e) {
+        console.warn('PESI: relocateCheckboxParagraphs failed', e);
+        return false;
+    }
+}
+
+// Hide tiny, decorative visual artifacts that sometimes appear in saved
+// snapshots (small squares, spacer images, etc.). This is non-destructive:
+// we only set `visibility:hidden` and mark elements with a data attribute.
+function hideSmallVisualArtifacts() {
+    try {
+        const reason = document.getElementById('reason');
+        const viewport = { w: window.innerWidth, h: window.innerHeight };
+
+        // Gather candidate elements that are visible and small
+        const candidates = Array.from(document.querySelectorAll('div,span,label,td,section,aside,figure')).filter(el => {
+            if (el.dataset && el.dataset.pesiHiddenArtifact) return false;
+            if (!(el instanceof Element)) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+            return true;
+        });
+
+        let hiddenCount = 0;
+        const reasonRect = reason ? reason.getBoundingClientRect() : null;
+
+        candidates.forEach(el => {
+            try {
+                const r = el.getBoundingClientRect();
+                // Ignore elements outside viewport
+                if (r.right < 0 || r.left > viewport.w || r.bottom < 0 || r.top > viewport.h) return;
+
+                const area = r.width * r.height;
+                // Target very small glyph-like elements (approx 6x6 up to 36x36 px)
+                if (area > 0 && area <= 1600 && r.width <= 60 && r.height <= 60 && (r.width < 40 || r.height < 40)) {
+                    // If reason exists, prefer elements close to the left of it
+                    if (reasonRect) {
+                        const dx = Math.abs(r.left - reasonRect.left);
+                        const dy = Math.abs(r.top - reasonRect.top);
+                        if (dx > 150 && dy > 150) return; // too far
+                    }
+
+                    // Heuristic: if element has no text content or only whitespace, it's likely decorative
+                    const text = (el.textContent || '').trim();
+                    if (text.length === 0 || text.length <= 2) {
+                        el.style.visibility = 'hidden';
+                        el.dataset.pesiHiddenArtifact = '1';
+                        hiddenCount++;
+                    }
+                }
+            } catch (e) {
+                // ignore individual errors
+            }
+        });
+
+        if (hiddenCount > 0) console.log(`PESI: hid ${hiddenCount} small visual artifact(s)`);
+        return hiddenCount;
+    } catch (e) {
+        console.warn('PESI: hideSmallVisualArtifacts failed', e);
+        return 0;
+    }
+}
+
+// Normalize the duration display if it already exists on the page
+function normalizeDurationDisplay() {
+    try {
+        const d = document.getElementById('pesi-duration-display');
+        if (!d) return false;
+        const txt = (d.textContent || '').trim();
+        if (txt.length === 0) {
+            d.style.display = 'none';
+        } else {
+            d.style.display = 'inline-block';
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 // Guard: ensure we only operate on the HR domain
 function isHrDomain() {
     return location.hostname.includes('hr.pesi.com.tw');
@@ -75,9 +297,16 @@ function initImprovements() {
     }
 
     console.log("PESI HR Improver: Initializing...");
-    
-    // Run registered features (idempotent per-feature)
-    featureRegistry.runAll();
+        
+        // Apply small runtime CSS fixes (non-destructive) before running features
+        try { injectRuntimeCssFixes(); } catch (e) { /* ignore */ }
+        // Apply runtime DOM relocation to fix collocated checkbox layout
+        try { relocateCheckboxParagraphs(); } catch (e) { /* ignore */ }
+        // Normalize/hide any pre-existing duration display (covers saved snapshots)
+        try { normalizeDurationDisplay(); } catch (e) { /* ignore */ }
+
+        // Run registered features (idempotent per-feature)
+        featureRegistry.runAll();
 
     // SAFE MODE: Wait for the page to be fully settled
     // Legacy ASP.NET pages often have complex initialization scripts.
@@ -92,6 +321,9 @@ function initImprovements() {
     // Observe DOM mutations to re-run enhancements after partial postbacks
     const debouncedEnhance = debounce(() => {
         featureRegistry.runAll();
+        try { relocateCheckboxParagraphs(); } catch (e) { /* ignore */ }
+        try { hideSmallVisualArtifacts(); } catch (e) { /* ignore */ }
+        try { normalizeDurationDisplay(); } catch (e) { /* ignore */ }
         checkAndEnhanceForms();
     }, 400);
     const observer = new MutationObserver(() => debouncedEnhance());
@@ -624,7 +856,8 @@ function initAutoDurationCalculator() {
     display.style.padding = '10px';
     display.style.backgroundColor = '#e7f1ff';
     display.style.borderRadius = '4px';
-    display.style.display = 'inline-block';
+    // Start hidden to avoid showing an empty padded box in snapshots
+    display.style.display = 'none';
     
     // Insert after the last time field (to_time) container
     // We try to find a good place to put it. Usually the parent of the input is a TD.
@@ -658,12 +891,15 @@ function initAutoDurationCalculator() {
                 
                 display.textContent = text;
                 display.style.color = '#007bff';
+                display.style.display = 'inline-block';
             } else {
                 display.textContent = '⚠️ 結束時間必須晚於開始時間';
                 display.style.color = '#dc3545';
+                display.style.display = 'inline-block';
             }
         } else {
             display.textContent = '';
+            display.style.display = 'none';
         }
     }
 
