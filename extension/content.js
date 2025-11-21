@@ -152,12 +152,21 @@ function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
     let history = JSON.parse(localStorage.getItem(storageKey) || '[]');
     
     // Combine defaults and history (unique values)
-    const allOptions = [...new Set([...defaultOptions, ...history])].slice(0, 8); // Limit to 8 chips
+    // Handle if defaultOptions contains objects {text, value} or strings
+    const normalizedDefaults = defaultOptions.map(opt => 
+        typeof opt === 'string' ? {text: opt, value: opt} : opt
+    );
+    const normalizedHistory = history.map(opt => 
+        typeof opt === 'string' ? {text: opt, value: opt} : opt
+    );
+    const allOptions = [...normalizedDefaults, ...normalizedHistory]
+        .filter((opt, index, arr) => arr.findIndex(o => o.text === opt.text) === index)
+        .slice(0, 8); // Limit to 8 chips
 
     // Create Chips
-    allOptions.forEach(text => {
+    allOptions.forEach(option => {
         const chip = document.createElement('button');
-        chip.textContent = text;
+        chip.textContent = option.text;
         chip.type = 'button';
         chip.className = 'pesi-chip';
         chip.onclick = (e) => {
@@ -170,7 +179,7 @@ function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
                 let found = false;
                 for (let i = 0; i < currentInput.options.length; i++) {
                     const opt = currentInput.options[i];
-                    if (opt.text.trim().includes(text)) {
+                    if (opt.text.trim().includes(option.text)) {
                         // SIMPLIFIED: Just set selectedIndex. 
                         // Don't touch .selected property manually to avoid fighting the browser.
                         currentInput.selectedIndex = i;
@@ -180,11 +189,11 @@ function addSmartInputFeatures(inputId, storageKey, defaultOptions = []) {
                     }
                 }
                 if (!found) {
-                    console.warn(`Pesi Extension: Option '${text}' not found.`);
+                    console.warn(`Pesi Extension: Option '${option.text}' not found.`);
                     return; 
                 }
             } else {
-                currentInput.value = text;
+                currentInput.value = option.value;
             }
             
             // Visual Feedback

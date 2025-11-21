@@ -15,7 +15,12 @@
         initAutoDurationCalculator();
         
         addSmartInputFeatures('reason', 'pesi_history_reason', ['私事處理', '身體不適', '看診', '家庭照顧']);
-        addSmartInputFeatures('ab_type', 'pesi_history_ab_type', ['特休', '事假', '病假', '補休']);
+        addSmartInputFeatures('ab_type', 'pesi_history_ab_type', [
+            {text: '特休', value: '01'},
+            {text: '事假', value: '02'},
+            {text: '病假', value: '03'},
+            {text: '補休', value: '04'}
+        ]);
         
         enhanceHistoryTables();
     }
