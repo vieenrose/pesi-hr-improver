@@ -1,3 +1,13 @@
+# Ignore everything by default
+/*
+
+# But keep .gitignore itself, README and the extension directory
+!.gitignore
+!/README.md
+!/extension/
+!/extension/**
+
+# End of file
 *.zip
 node_modules/
 webpages/
