@@ -28,13 +28,14 @@
 
 ### 🚀 2. 智慧填寫，告別手動
 *   **快速日期**：提供「今天」、「明天」按鈕，一鍵帶入日期。
-*   **常用時間**：內建 `08:00`、`09:00`、`13:00`、`18:00` 等按鈕，快速設定上下班時間。
+*   **Material Design 3 時間選擇器**：採用現代化的 MD3 設計時間輸入框，支援原生瀏覽器時間挑選器，提供更直覺的時間設定體驗。
 *   **日期同步**：點選「同開始日」，結束日期自動同步，避免手殘選錯月份。
 
 ### 📝 3. 越用越聰明的「智慧標籤」
 *   **自動學習**：系統會自動記住您常輸入的 **「事由」** (如：看診、私事處理)。
 *   **快速假別**：請假單新增 **「假別」** 快速按鈕 (如：特休、事假、病假)，點擊即選中，支援連動系統更新。
 *   **一鍵帶入**：下次填寫時，這些內容會變成 **「可點擊的標籤」**，按一下就填好，不用再打字！
+*   **修正完成**：已修復請假類型自動填入功能，現在正確設定系統所需的 ID 值而非顯示名稱。
 
 ### ⏱️ 4. 即時時數計算
 *   **即時預覽**：調整日期或時間時，畫面即時顯示 **「預計時數」** (例如：*1 天 4.5 小時*)。
@@ -85,4 +86,9 @@
 *   **Tech Stack**: Vanilla JavaScript (ES6+), CSS3, Chrome Extension Manifest V3
 *   **Core Logic**: DOM Manipulation, MutationObserver
 *   **Compatibility**: Google Chrome, Microsoft Edge
+*   **Latest Version**: 0.3.26
+*   **Recent Updates**: 
+    *   Material Design 3 time picker implementation
+    *   Fixed leave type auto-filler with correct ID mappings
+    *   Improved user experience with modern UI components
 
