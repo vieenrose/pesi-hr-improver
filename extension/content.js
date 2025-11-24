@@ -222,6 +222,9 @@ function isHrDomain() {
 }
 
 function uiInjectLeaveFormValue(){
+  const FLAG = '__pesiLeaveReasonPrefillDone';
+  if (window[FLAG]) return; // run only once per page load
+  window[FLAG] = true;
   try {
     // Only apply on leave pages, and only if the field is empty
     if (!isLeaveContext()) return;
