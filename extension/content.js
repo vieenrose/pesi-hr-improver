@@ -222,9 +222,18 @@ function isHrDomain() {
 }
 
 function uiInjectLeaveFormValue(){
-  let reason = document.getElementById("reason");
-  if (reason){
-    reason.value = "私事處理";
+  try {
+    // Only apply on leave pages, and only if the field is empty
+    if (!isLeaveContext()) return;
+    const reason = document.getElementById("reason");
+    if (!reason) return;
+    const current = (reason.value || '').trim();
+    if (!current) {
+      reason.value = "私事處理";
+      try { triggerChange(reason); } catch (_) {}
+    }
+  } catch (e) {
+    // ignore
   }
 }
 
@@ -275,7 +284,6 @@ function isLeaveContext() {
     const bodyText = document.body.textContent || '';
     const isLeaveUrl = url.includes("SW0029");
     const isLeaveText = bodyText.includes("請假申請") || title.includes("請假申請") || bodyText.includes("Leave Application");
-    uiInjectLeaveFormValue();
     return isLeaveUrl || isLeaveText;
 }
 
@@ -966,6 +974,8 @@ featureRegistry.register('attendance-scan', {
 
 featureRegistry.register('leave-enhancer', {
     init: () => {
+        // Prefill reason only for blank leave forms; do not override user input or trip pages
+        uiInjectLeaveFormValue();
         if (typeof PesiLeaveEnhancer !== 'undefined') {
             PesiLeaveEnhancer.enhanceLeaveApplication();
         }
