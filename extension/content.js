@@ -111,103 +111,22 @@ function injectRuntimeCssFixes() {
 // overlaps other inputs in saved HTML snapshots. The operation is idempotent
 // (marks the moved node with a data attribute) and avoids editing saved files.
 function relocateCheckboxParagraphs() {
+    // Disabled: relocating/duplicating the checkbox rows put them above native modals.
+    // Also clean up any previously inserted clones for users upgrading mid-session.
     try {
-        const checkboxIds = ['cross_holiday', 'fix_time', 'use_ab_time'];
-        const checks = checkboxIds.map(id => document.getElementById(id)).filter(Boolean);
-        if (checks.length === 0) return false;
-
-        // Find the nearest common ancestor that contains all checkboxes
-        const ancestors = (el) => {
-            const a = [];
-            while (el) { a.push(el); el = el.parentElement; }
-            return a;
-        };
-
-        let common = null;
-        const firstAnc = ancestors(checks[0]);
-        for (const anc of firstAnc) {
-            if (checks.every(e => anc.contains(e))) { common = anc; break; }
+        const relocated = document.querySelector('.pesi-relocated-checkboxes');
+        if (relocated && relocated.parentNode) {
+            relocated.parentNode.removeChild(relocated);
         }
-        if (!common) {
-            // fallback will try a more surgical relocation
-        } else {
-            // Avoid moving document-level containers and prefer a P/DIV/TD/FIELDSET container
-            if (['BODY', 'HTML', 'FORM'].includes(common.tagName)) {
-                common = checks[0].closest('p,div,td,fieldset') || common;
-            }
-
-            if (common && !(common.dataset && common.dataset.pesiRelocated)) {
-                const reason = document.getElementById('reason');
-                if (reason) {
-                    try {
-                        if (!(reason.compareDocumentPosition(common) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-                            const target = reason.parentNode || reason;
-                            if (target && target.parentNode) {
-                                if (target.nextSibling) target.parentNode.insertBefore(common, target.nextSibling);
-                                else target.parentNode.appendChild(common);
-                            } else {
-                                if (reason.nextSibling) reason.parentNode.insertBefore(common, reason.nextSibling);
-                                else reason.parentNode.appendChild(common);
-                            }
-                        }
-                        common.dataset.pesiRelocated = '1';
-                        return true;
-                    } catch (e) {
-                        // continue to fallback below
-                    }
-                }
-            }
-        }
-
-        // Fallback strategy: create a new container and clone the checkbox wrappers
-        try {
-            const reason = document.getElementById('reason');
-            if (!reason) return false;
-
-            // Find reasonable wrapper elements for each checkbox (label/p/td/div/span)
-            const wrappers = [];
-            checks.forEach(cb => {
-                const w = cb.closest('label, p, td, div, span') || cb.parentElement;
-                if (w && !wrappers.includes(w)) wrappers.push(w);
-            });
-            if (wrappers.length === 0) return false;
-
-            // If we've already created a relocated container, skip
-            if (document.querySelector('.pesi-relocated-checkboxes')) return true;
-
-            const newContainer = document.createElement('div');
-            newContainer.className = 'pesi-relocated-checkboxes';
-            newContainer.dataset.pesiRelocated = '1';
-
-            wrappers.forEach(w => {
-                try {
-                    const clone = w.cloneNode(true);
-                    newContainer.appendChild(clone);
-                    // hide original wrapper visually but keep in DOM for forms that may read values
-                    w.style.visibility = 'hidden';
-                    w.dataset.pesiRelocatedOriginal = '1';
-                } catch (e) { /* continue */ }
-            });
-
-            // Insert after reason's container
-            const target = reason.parentNode || reason;
-            if (target && target.parentNode) {
-                if (target.nextSibling) target.parentNode.insertBefore(newContainer, target.nextSibling);
-                else target.parentNode.appendChild(newContainer);
-            } else {
-                if (reason.nextSibling) reason.parentNode.insertBefore(newContainer, reason.nextSibling);
-                else reason.parentNode.appendChild(newContainer);
-            }
-
-            return true;
-        } catch (e) {
-            console.warn('PESI: relocate fallback failed', e);
-            return false;
-        }
+        const originals = document.querySelectorAll('[data-pesiRelocatedOriginal], [data-pesi-relocated-original]');
+        originals.forEach(el => {
+            el.style.visibility = '';
+            delete el.dataset.pesiRelocatedOriginal;
+        });
     } catch (e) {
-        console.warn('PESI: relocateCheckboxParagraphs failed', e);
-        return false;
+        console.warn('PESI: relocateCheckboxParagraphs cleanup failed', e);
     }
+    return false;
 }
 
 // Hide tiny, decorative visual artifacts that sometimes appear in saved
