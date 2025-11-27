@@ -96,7 +96,7 @@ function injectRuntimeCssFixes() {
 
         const style = document.createElement('style');
         style.setAttribute('data-pesi-fix', 'checkbox-layout');
-        style.appendChild(document.createTextNode(css));
+       
         // Prepend to head so it's applied before other rules where possible
         const parent = document.head || document.documentElement;
         parent.insertBefore(style, parent.firstChild);
@@ -221,6 +221,45 @@ function isHrDomain() {
     return location.hostname.includes('hr.pesi.com.tw');
 }
 
+// Global submitting flag
+window.pesiSubmitting = false;
+
+// Detect submit button and pause on click
+function setupSubmitPause() {
+  // Run periodically to catch button
+  const interval = setInterval(() => {
+    const submitBtn = document.getElementById('apply_button');
+    if (submitBtn && (submitBtn.textContent || '').includes('開始公出申請') && !submitBtn.dataset.pesiPaused) {
+      submitBtn.dataset.pesiPaused = 'true';
+      submitBtn.addEventListener('click', () => {
+        window.pesiSubmitting = true;
+        console.log('PESI: Submission started, enhancements paused');
+      }, { once: true });
+      clearInterval(interval);
+    }
+  }, 500);
+  
+  // Self-clear after 10s if no button
+  setTimeout(() => clearInterval(interval), 10000);
+}
+
+// Enhanced isProcessing
+function isProcessing() {
+  const domProcessing = !!document.getElementById('loader') ||
+         !!document.querySelector('#myProgress, #myBar, #myStatus') ||
+         document.body.innerText.includes('處理中') ||
+         document.body.innerText.includes('等待') ||
+         document.body.innerText.includes('提交') ||
+         !!document.querySelector('.loading, [class*="load"], [class*="progress"], [class*="spinner"]');
+  
+  if (!domProcessing && window.pesiSubmitting) {
+    window.pesiSubmitting = false;
+    console.log('PESI: Processing ended (cancel?), resuming enhancements');
+  }
+  
+  return window.pesiSubmitting || domProcessing;
+}
+
 function uiInjectLeaveFormValue(){
   const FLAG = '__pesiLeaveReasonPrefillDone';
   if (window[FLAG]) return; // run only once per page load
@@ -240,6 +279,17 @@ function uiInjectLeaveFormValue(){
   }
 }
 
+// Fonction idempotente pour features
+function runEnhancementsOnce() {
+  if (document.body.dataset.pesiEnhanced) return;
+  document.body.dataset.pesiEnhanced = 'true';
+  
+  // Run all once
+  featureRegistry.runAll();
+  hideSmallVisualArtifacts();
+  normalizeDurationDisplay();
+}
+
 // Function to initialize improvements when a target form is detected
 function initImprovements() {
     if (!isHrDomain()) {
@@ -257,28 +307,32 @@ function initImprovements() {
         try { normalizeDurationDisplay(); } catch (e) { /* ignore */ }
 
         // Run registered features (idempotent per-feature)
-        featureRegistry.runAll();
+        runEnhancementsOnce();
 
     // SAFE MODE: Wait for the page to be fully settled
     // Legacy ASP.NET pages often have complex initialization scripts.
     // We wait 1 second after load to ensure we don't interfere with them.
     setTimeout(() => {
+      if (!isProcessing()) {
         checkAndEnhanceForms();
+      }
     }, 1000);
 
     // Fallback: Check on clicks (for navigation that might not trigger reload)
-    document.addEventListener('click', () => setTimeout(checkAndEnhanceForms, 1000));
-
-    // Observe DOM mutations to re-run enhancements after partial postbacks
-    const debouncedEnhance = debounce(() => {
-        featureRegistry.runAll();
-        try { relocateCheckboxParagraphs(); } catch (e) { /* ignore */ }
-        try { hideSmallVisualArtifacts(); } catch (e) { /* ignore */ }
-        try { normalizeDurationDisplay(); } catch (e) { /* ignore */ }
+    document.addEventListener('click', () => setTimeout(() => {
+      if (!isProcessing()) {
         checkAndEnhanceForms();
-    }, 400);
-    const observer = new MutationObserver(() => debouncedEnhance());
-    observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }, 1000));
+
+    // Observer seulement pour pages NON-formulaires (attendance scan)
+    if (!isLeaveContext() && !isTripContext()) {
+      const debouncedEnhance = debounce(() => {
+        safeEnhance(() => featureRegistry.runAll());
+      }, 1000);
+      const observer = new MutationObserver(() => debouncedEnhance());
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 }
 
 function isLeaveContext() {
@@ -296,11 +350,14 @@ function isTripContext() {
     const bodyText = document.body.textContent || '';
     const isTripUrl = url.includes("SW0210") || url.includes("SW0212");
     const isTripText = bodyText.includes("公出") || bodyText.includes("出差") || title.includes("公出") || title.includes("出差") || bodyText.includes("Business Trip");
+    // Exclude loading/submission state
+    if (isProcessing() || !document.getElementById('from_date')) return false; // Exclude loading/submission
     return isTripUrl || isTripText;
 }
 
 function checkAndEnhanceForms() {
-    featureRegistry.runAll();
+  if (isProcessing()) return;
+  featureRegistry.runAll();
 }
 
 // Legacy helper retained: placeholder for backward compat (no-op)
@@ -842,11 +899,10 @@ function initAutoDurationCalculator() {
                 
                 display.textContent = text;
                 display.style.color = '#007bff';
-                display.style.display = 'inline-block';
+                display.style.display = 'block';
             } else {
-                display.textContent = '⚠️ 結束時間必須晚於開始時間';
-                display.style.color = '#dc3545';
-                display.style.display = 'inline-block';
+                display.textContent = '';
+                display.style.display = 'none';
             }
         } else {
             display.textContent = '';
@@ -1002,8 +1058,10 @@ featureRegistry.register('trip-enhancer', {
         if (enableExtraUi() && typeof PesiAnalyzer !== 'undefined') {
             PesiAnalyzer.addAnalyzerButton();
         }
+
+        setupSubmitPause();
     },
-    shouldRun: () => isHrDomain() && isTripContext()
+    shouldRun: () => isHrDomain() && isTripContext() && !isProcessing()
 });
 
 if (document.readyState === 'loading') {
@@ -1011,3 +1069,5 @@ if (document.readyState === 'loading') {
 } else {
     initImprovements();
 }
+
+setupSubmitPause();
