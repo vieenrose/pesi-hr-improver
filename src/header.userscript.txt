@@ -1,0 +1,26 @@
+// ==UserScript==
+// @name         百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)
+// @namespace    https://hr.pesi.com.tw/
+// @version      __VERSION__
+// @description  Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 system. Covers all five application forms (leave SW0009, overtime SW0005, business-trip SW0212, card-correction SW0013, no-overtime-explanation SW0405) plus the leave-query screen SW0037. Drives the original fields underneath — no server changes.
+// @author       you
+// @match        https://hr.pesi.com.tw/HtmlWorkFlow/Index.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0009/SW0009.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0005/SW0005.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0037/SW0037.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0212/SW0212.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0013/SW0013.html*
+// @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0405/SW0405.html*
+// @run-at       document-idle
+// @grant        none
+// @noframes     false
+// ==/UserScript==
+//
+// GENERATED FILE — do not edit directly. Edit src/enhancer.js and run ./sync.sh.
+//
+// The HR app loads each form as a separate HTML page inside an <iframe>
+// (work-iframe -> /webflow_forms/<FORM>/<FORM>.html). Tampermonkey injects into
+// matching frames, so this runs inside the form iframe: getElementById returns
+// the real legacy fields. Dates use Minguo (民國) eee/mm/dd (year = Gregorian
+// - 1911). Disabling the script reverts every form untouched.
+

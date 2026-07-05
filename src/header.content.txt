@@ -1,0 +1,17 @@
+// PESI Workflow Enhancer — content script (browser extension)
+//
+// GENERATED FILE — do not edit directly. Edit src/enhancer.js and run ./sync.sh.
+//
+// ARCHITECTURE NOTE
+// The HR app loads each form as a separate HTML page inside an <iframe>
+// (work-iframe -> /webflow_forms/<FORM>/<FORM>.html). This extension declares the
+// content script with "all_frames": true, so it runs *inside* the matching form
+// iframe: getElementById returns the real legacy fields. The parent dashboard
+// (window.top) holds the leave-balance banner, which we read same-origin.
+//
+// DATES: the system stores dates as OLE/Excel serials and displays them as
+// Minguo (民國) "eee/mm/dd" (year = Gregorian - 1911). Confirmed by inspecting a
+// live query request: input "115/01/01" was sent as serial 46023 (= 2026-01-01).
+//
+// SAFE TO REMOVE: disable the extension and every form reverts untouched.
+
