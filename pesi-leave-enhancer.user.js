@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)
 // @namespace    https://hr.pesi.com.tw/
-// @version      0.8.2
+// @version      0.9.0
 // @description  Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 system. Covers all five application forms (leave SW0009, overtime SW0005, business-trip SW0212, card-correction SW0013, no-overtime-explanation SW0405) plus the leave-query screen SW0037. Drives the original fields underneath — no server changes.
 // @author       you
 // @match        https://hr.pesi.com.tw/HtmlWorkFlow/Index.html*
@@ -66,36 +66,13 @@
     setTimeout(function () { ready(test, cb, tries + 1); }, 250);
   }
 
-  /* ---------- 考勤異常 decode + draft handoff ---------- */
-  function oleGreg(s) {                       // OLE/Excel serial -> "YYYY-MM-DD"
-    var d = new Date(Date.UTC(1899, 11, 30) + Number(s) * 86400000);
-    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
-  }
-  function fracHHMM(f) { var m = Math.round(Number(f) * 1440); return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
-  function hhmmH(t) { var p = t.split(':'); return Number(p[0]) + Number(p[1]) / 60; }
-  // One-shot: a dashboard row stashes a draft in localStorage; the target form
-  // reads + clears it on open and pre-fills itself (same-origin handoff).
-  function takeDraft(form) {
-    try {
-      var raw = localStorage.getItem('hrx_draft'); if (!raw) return null;
-      var d = JSON.parse(raw); if (d && d.form === form) { localStorage.removeItem('hrx_draft'); return d; }
-    } catch (e) { }
-    return null;
-  }
-
-  /* ---------- settings + background channel ----------
-   * Settings (username / company / autoLogin / notify) are NON-SECRET. We never
-   * store the password anywhere — auto-login relies on the browser's own
-   * password manager autofilling the field; we only click 登入 afterwards. */
+  /* ---------- settings ----------
+   * Settings (username / company) are NON-SECRET. We never store the password
+   * anywhere — auto-login relies on the browser's own password manager
+   * autofilling the field; we only click 登入 afterwards. */
   function getSettings() { try { return JSON.parse(localStorage.getItem('hrx_settings') || '{}'); } catch (e) { return {}; } }
   function saveSettings(s) {
     try { localStorage.setItem('hrx_settings', JSON.stringify(s)); } catch (e) { }
-    try { if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) chrome.storage.local.set({ hrx_settings: s }); } catch (e) { }
-  }
-  // Tell the extension background worker the current state (anomaly count / login
-  // status). No-op in the Tampermonkey userscript (no chrome.runtime).
-  function reportStatus(n, loggedIn) {
-    try { if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) chrome.runtime.sendMessage({ type: 'hrx_status', n: n, loggedIn: loggedIn }); } catch (e) { }
   }
   function findByText(labels) {
     var all = document.querySelectorAll('a,button,input[type=button],input[type=submit],div,span');
@@ -226,16 +203,6 @@
       native.forEach(function (el) { el.style.visibility = shown ? 'visible' : 'hidden'; });
       g('hrx-toggle').textContent = shown ? '◂ 回到新版介面' : '顯示原始介面 ▸';
     });
-
-    var draft = takeDraft('SW0009');   // pre-fill from a 考勤異常 batch draft, if any
-    if (draft) {
-      if (draft.typeCode) g('hrx-type').value = draft.typeCode;
-      if (draft.date) { g('hrx-fd').value = draft.date; g('hrx-td').value = draft.date; }
-      if (draft.from) g('hrx-ft').value = draft.from;
-      if (draft.to) g('hrx-tt').value = draft.to;
-      if (draft.reason) g('hrx-reason').value = draft.reason;
-      sync();
-    }
   }
 
   /* ================= SW0212 : 公出/出差 (full overlay) ================= */
@@ -316,16 +283,6 @@
       native.forEach(function (el) { el.style.visibility = shown ? 'visible' : 'hidden'; });
       g('hrx-toggle').textContent = shown ? '◂ 回到新版介面' : '顯示原始介面 ▸';
     });
-
-    var draft = takeDraft('SW0212');   // pre-fill from a 考勤異常 batch draft, if any
-    if (draft) {
-      if (draft.typeCode) g('hrx-type').value = draft.typeCode;
-      if (draft.date) { g('hrx-fd').value = draft.date; g('hrx-td').value = draft.date; }
-      if (draft.from) g('hrx-ft').value = draft.from;
-      if (draft.to) g('hrx-tt').value = draft.to;
-      if (draft.reason) g('hrx-reason').value = draft.reason;
-      sync();
-    }
   }
 
   /* ================= SW0013 : 補卡/忘打卡 (full overlay) ================= */
@@ -489,164 +446,14 @@
     var btn = findByText(['登入', '登 入']);
     if (btn) btn.addEventListener('click', remember);
     if (form && form.tagName === 'FORM') form.addEventListener('submit', remember);
-    reportStatus(0, false);   // tell the background worker: logged out
-  }
-
-  // Small persistent toggle for background anomaly notifications (extension only).
-  function injectNotifyToggle() {
-    if (document.getElementById('hrx-notify')) return;
-    var el = document.createElement('div');
-    el.id = 'hrx-notify';
-    el.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:99997;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;font-size:13px;background:#fff;border:1px solid #dde3ee;border-radius:20px;padding:7px 13px;box-shadow:0 4px 14px rgba(20,40,90,.12);cursor:pointer;color:#43506b;user-select:none';
-    var draw = function () { el.textContent = getSettings().notify ? '🔔 背景通知：開' : '🔕 背景通知：關'; };
-    draw();
-    el.addEventListener('click', function () {
-      var s = getSettings(); s.notify = !s.notify; if (s.notifyIntervalMin == null) s.notifyIntervalMin = 60;
-      saveSettings(s); draw();
-    });
-    document.body.appendChild(el);
   }
 
   // Decide login vs dashboard once the SPA has rendered.
   function runHome(tries) {
     tries = tries || 0;
     if (document.querySelector('input[type=password]')) return runLogin();
-    if (/考勤表單流程/.test(document.body.textContent || '')) return runDashboard();
     if (tries > 40) return;
     setTimeout(function () { runHome(tries + 1); }, 300);
-  }
-
-  /* ============ DASHBOARD (Index.html) : 考勤異常 批次處理 ============ */
-  // Configurable rule engine — first matching rule wins. EDIT THIS to add buckets.
-  // Each rule: match(anomaly) -> boolean; draft(anomaly) -> the corrective filing.
-  var ANOMALY_RULES = [
-    {
-      label: '遲到 09:00–10:00 → 公出（拜訪客戶）08:00→到班',
-      match: function (a) { return a.kind === 'absence' && a.entryH >= 9 && a.entryH < 10; },
-      draft: function (a) {
-        return { form: 'SW0212', cat: '公出/出差', formName: '公出', typeCode: 'a13',
-                 date: a.date, from: '08:00', to: a.entry, reason: '拜訪客戶' };
-      }
-    }
-    // e.g. add: 遲到 10:00–12:00 → 請假 事假；或 特定情形 → 出差(a14) ...
-  ];
-
-  // Parse the dashboard's 考勤異常 rows into structured anomalies (only the
-  // "有缺勤時數無請假單" ones carry a machine-readable date/time deep-link).
-  function parseAnomalies() {
-    var list = [], seen = {};
-    [].slice.call(document.querySelectorAll('a')).forEach(function (a) {
-      var h = a.getAttribute('href') || a.getAttribute('onclick') || '';
-      var m = h.match(/FROM_DATE:([\d.]+),FROM_TIME:([\d.]+),TO_DATE:[\d.]+,TO_TIME:([\d.]+)/);
-      if (!m || !/缺勤/.test(a.textContent || '')) return;
-      var date = oleGreg(m[1]), entry = fracHHMM(m[3]);
-      var key = date + entry; if (seen[key]) return; seen[key] = 1;
-      var an = { kind: 'absence', date: date, from: fracHHMM(m[2]), entry: entry, entryH: hhmmH(entry) };
-      for (var i = 0; i < ANOMALY_RULES.length; i++) {
-        if (ANOMALY_RULES[i].match(an)) { an.draft = ANOMALY_RULES[i].draft(an); an.rule = ANOMALY_RULES[i].label; break; }
-      }
-      list.push(an);
-    });
-    list.sort(function (x, y) { return x.date < y.date ? -1 : 1; });
-    return list;
-  }
-
-  // Open a form the reliable way: click an EXISTING page control (dashboard tile
-  // or menu item) whose handler already navigates to it. A synthetic .click()
-  // fires that element's page-world onclick, so this works from the isolated
-  // content-script world — a javascript: anchor created here would NOT, because
-  // it can't see page globals like setSelectedForm.
-  function openForm(formId) {
-    var els = document.querySelectorAll('[onclick],[href]');
-    for (var i = 0; i < els.length; i++) {
-      var h = (els[i].getAttribute('onclick') || '') + ' ' + (els[i].getAttribute('href') || '');
-      if (h.indexOf(formId) !== -1 && /setSelectedForm/.test(h)) { els[i].click(); return true; }
-    }
-    return false;
-  }
-
-  var DASH_CSS =
-    '<style>' +
-    '#hrx-badge{position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:99998;background:#fff;border:1px solid #ffd6a0;border-left:6px solid #f59e0b;border-radius:12px;box-shadow:0 6px 20px rgba(20,40,90,.15);padding:12px 18px;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;display:flex;align-items:center;gap:14px;font-size:15px;color:#7a4a06}' +
-    '#hrx-badge b{background:#f59e0b;color:#fff;border-radius:20px;padding:2px 11px;font-size:15px}' +
-    '#hrx-badge button{border:0;border-radius:8px;background:#1558d6;color:#fff;font-size:14px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:inherit}' +
-    '#hrx-badge .x{cursor:pointer;color:#b98a3a;font-size:18px;padding:0 2px}' +
-    '#hrx-modal{position:fixed;inset:0;z-index:99999;background:rgba(20,30,55,.45);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:36px 16px;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}' +
-    '#hrx-sheet{background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(20,40,90,.3);max-width:760px;width:100%;padding:24px 26px;box-sizing:border-box}' +
-    '#hrx-sheet h2{margin:0 0 4px;font-size:20px;color:#1a2b4a}' +
-    '#hrx-sheet .sub{color:#8a93a6;font-size:13px;margin:0 0 16px}' +
-    '.hrx-t{width:100%;border-collapse:collapse;font-size:14px}' +
-    '.hrx-t th,.hrx-t td{text-align:left;padding:9px 8px;border-bottom:1px solid #eef1f6;vertical-align:middle;color:#28344d}' +
-    '.hrx-t th{font-size:12px;color:#8a93a6;font-weight:600}' +
-    '.hrx-t input.rsn{width:130px;font-size:13px;padding:6px 8px;border:1.5px solid #cdd5e4;border-radius:7px;font-family:inherit}' +
-    '.hrx-pill{display:inline-block;background:#eef4ff;color:#1558d6;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}' +
-    '.hrx-pill.na{background:#f4f5f7;color:#98a1b2}' +
-    '.hrx-go{border:0;border-radius:8px;background:#1558d6;color:#fff;font-size:13px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit}' +
-    '.hrx-go:disabled{background:#cbd3e1;cursor:not-allowed}' +
-    '#hrx-sheet .note{margin:14px 0 0;font-size:12px;color:#8a6d1a;background:#fff7e6;border:1px solid #ffe0a3;border-radius:8px;padding:9px 12px}' +
-    '#hrx-sheet .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}' +
-    '#hrx-sheet .foot button{border:1.5px solid #cdd5e4;background:#fff;border-radius:9px;padding:10px 18px;font-size:14px;cursor:pointer;font-family:inherit;color:#43506b}' +
-    '</style>';
-
-  function openReview(anomalies) {
-    if (document.getElementById('hrx-modal')) return;
-    var rows = anomalies.map(function (a, i) {
-      var d = a.draft;
-      var action = d
-        ? '<span class="hrx-pill">' + d.formName + '</span> ' + d.from + '–' + d.to +
-          ' <input class="rsn" data-i="' + i + '" value="' + d.reason + '">'
-        : '<span class="hrx-pill na">無對應規則</span>';
-      var btn = d
-        ? '<button class="hrx-go" data-i="' + i + '">填入並開啟 ▸</button>'
-        : '<button class="hrx-go" disabled>—</button>';
-      return '<tr><td>' + a.date + '</td><td>到班 ' + a.entry + '</td><td>' + action + '</td><td>' + btn + '</td></tr>';
-    }).join('');
-    var withRule = anomalies.filter(function (a) { return a.draft; }).length;
-    var modal = document.createElement('div');
-    modal.id = 'hrx-modal';
-    modal.innerHTML = DASH_CSS +
-      '<div id="hrx-sheet">' +
-      '  <h2>🗂️ 考勤異常批次處理</h2>' +
-      '  <p class="sub">共 ' + anomalies.length + ' 筆缺勤異常，' + withRule + ' 筆符合規則、已自動草擬</p>' +
-      '  <table class="hrx-t"><thead><tr><th>日期</th><th>到班時間</th><th>建議處理（可改事由）</th><th></th></tr></thead>' +
-      '  <tbody>' + rows + '</tbody></table>' +
-      '  <p class="note">⚠️ 送出前請確認事由與實際情形相符。按「填入並開啟」會開啟已填好的表單，最後仍由你按【送出申請】確認，不會自動送出。</p>' +
-      '  <div class="foot"><button id="hrx-close">關閉</button></div>' +
-      '</div>';
-    document.body.appendChild(modal);
-    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
-    document.getElementById('hrx-close').addEventListener('click', function () { modal.remove(); });
-    [].slice.call(modal.querySelectorAll('.rsn')).forEach(function (inp) {
-      inp.addEventListener('input', function () { anomalies[Number(inp.dataset.i)].draft.reason = inp.value; });
-    });
-    [].slice.call(modal.querySelectorAll('.hrx-go[data-i]')).forEach(function (b) {
-      b.addEventListener('click', function () {
-        var d = anomalies[Number(b.dataset.i)].draft; if (!d) return;
-        localStorage.setItem('hrx_draft', JSON.stringify(d));
-        modal.remove();
-        openForm(d.form);
-      });
-    });
-  }
-
-  function runDashboard() {
-    injectNotifyToggle();
-    var render = function () {
-      var old = document.getElementById('hrx-badge'); if (old) old.remove();
-      var anomalies = parseAnomalies();
-      reportStatus(anomalies.length, true);        // update badge / background poll
-      if (!anomalies.length) return;               // N == 0 → no nag
-      var badge = document.createElement('div');
-      badge.id = 'hrx-badge';
-      badge.innerHTML = DASH_CSS + '⚠️ 有 <b>' + anomalies.length + '</b> 筆考勤異常待處理' +
-        '<button id="hrx-open">批次處理 ▸</button><span class="x" title="關閉">×</span>';
-      document.body.appendChild(badge);
-      badge.querySelector('#hrx-open').addEventListener('click', function () { openReview(parseAnomalies()); });
-      badge.querySelector('.x').addEventListener('click', function () { badge.remove(); });
-    };
-    // The anomaly list loads asynchronously; render now and re-check briefly.
-    render();
-    var tries = 0, iv = setInterval(function () { if (++tries > 12 || document.getElementById('hrx-badge')) { clearInterval(iv); return; } render(); }, 1000);
   }
 
   /* ---------- dispatch by form ---------- */

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)",
-  "version": "0.8.2",
-  "description": "Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 forms, a dashboard 考勤異常 batch handler, a toolbar button that opens the 出缺勤系統首頁, login username/company prefill, and optional background 考勤異常 desktop notifications (using your existing session — no password stored). Drives the original fields underneath — no server changes.",
+  "version": "0.9.0",
+  "description": "Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 forms, a toolbar button that opens the 出缺勤系統首頁, and login username/company prefill (never the password). Drives the original fields underneath — no server changes.",
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
@@ -17,11 +17,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": [
-    "storage",
-    "notifications",
-    "alarms"
-  ],
   "host_permissions": [
     "https://hr.pesi.com.tw/*"
   ],
