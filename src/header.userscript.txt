@@ -2,7 +2,7 @@
 // @name         百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)
 // @namespace    https://hr.pesi.com.tw/
 // @version      __VERSION__
-// @description  Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 system. Covers all five application forms (leave SW0009, overtime SW0005, business-trip SW0212, card-correction SW0013, no-overtime-explanation SW0405) plus the leave-query screen SW0037. Drives the original fields underneath — no server changes.
+// @description  Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 system and the EIP 會議室預約. Covers all five application forms (leave SW0009, overtime SW0005, business-trip SW0212, card-correction SW0013, no-overtime-explanation SW0405), the leave-query screen SW0037, and EIP meeting-room booking. Optional parallel Google Calendar event for 請假/公出/出差. Drives the original fields underneath — no server changes.
 // @author       you
 // @match        https://hr.pesi.com.tw/HtmlWorkFlow/Index.html*
 // @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0009/SW0009.html*
@@ -11,6 +11,7 @@
 // @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0212/SW0212.html*
 // @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0013/SW0013.html*
 // @match        https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0405/SW0405.html*
+// @match        https://eip.pesi.com.tw/tw/am/am_view.htm*
 // @run-at       document-idle
 // @grant        none
 // @noframes     false

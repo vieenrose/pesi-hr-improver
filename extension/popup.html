@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body{margin:0;padding:10px;width:260px;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:#f4f6fb;color:#1a2b4a}
+  h2{font-size:11px;font-weight:700;color:#8a93a6;margin:12px 0 6px;text-transform:uppercase}
+  h2:first-child{margin-top:0}
+  button{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;border:1.5px solid #cdd5e4;border-radius:10px;background:#fff;color:#1a2b4a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  button:last-child{margin-bottom:0}
+  button:hover{border-color:#1558d6;color:#1558d6;background:#eef4ff}
+  button:disabled{opacity:.6;cursor:default}
+  .icon{font-size:16px}
+  #swipe-result{font-size:12px;background:#fff;border:1.5px solid #cdd5e4;border-radius:10px;padding:8px 12px;margin-top:6px;min-height:16px}
+  .swipe-row{padding:2px 0;color:#25406e}
+  .swipe-head{font-weight:700;color:#1a2b4a;margin-bottom:6px}
+  .swipe-io{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:600}
+  .io-in{color:#1558d6}
+  .io-out{color:#c0392b}
+  .io-arrow{color:#8a93a6}
+  .swipe-all{color:#8a93a6;font-size:11px;letter-spacing:.02em}
+</style>
+</head>
+<body>
+  <h2>快速開啟</h2>
+  <button id="hr"><span class="icon">🏠</span> 出缺勤系統</button>
+
+  <button id="eip"><span class="icon">🗓️</span> 預約管理（會議室／公務車／車位）</button>
+
+  <h2>申請表單</h2>
+  <button id="leave"><span class="icon">🌴</span> 請假申請</button>
+  <button id="trip"><span class="icon">🚗</span> 公出／出差申請</button>
+  <button id="punch"><span class="icon">🕐</span> 忘記打卡申請</button>
+
+  <h2>今日刷卡資料</h2>
+  <button id="swipe-btn"><span class="icon">🔄</span> 查詢今日刷卡</button>
+  <div id="swipe-result"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

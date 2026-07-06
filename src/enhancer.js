@@ -40,6 +40,69 @@
     setTimeout(function () { ready(test, cb, tries + 1); }, 250);
   }
 
+  /* ---------- overlay-form comfort helpers: inline validation, remember
+   * last-used type, and a per-form reason-history quick-pick ---------- */
+  function showError(msg) { var el = g('hrx-err'); if (el) { el.textContent = msg; el.style.display = ''; } }
+  function clearError() { var el = g('hrx-err'); if (el) el.style.display = 'none'; }
+  function validateRange(fdId, ftId, tdId, ttId) {
+    var fd = g(fdId).value, ft = g(ftId).value, td = g(tdId).value, tt = g(ttId).value;
+    if (!fd || !ft || !td || !tt) return '請填寫完整的開始與結束日期時間';
+    if (!(new Date(td + 'T' + tt) > new Date(fd + 'T' + ft))) return '結束時間必須晚於開始時間';
+    return null;
+  }
+  function lastTypeKey(form) { return 'hrx_last_type_' + form; }
+  function reasonHistKey(form) { return 'hrx_reason_hist_' + form; }
+  function getReasonHistory(form) {
+    try { return JSON.parse(localStorage.getItem(reasonHistKey(form)) || '[]'); } catch (e) { return []; }
+  }
+  function pushReasonHistory(form, reason) {
+    reason = (reason || '').trim(); if (!reason) return;
+    var list = getReasonHistory(form).filter(function (r) { return r !== reason; });
+    list.unshift(reason); list = list.slice(0, 6);
+    try { localStorage.setItem(reasonHistKey(form), JSON.stringify(list)); } catch (e) { }
+  }
+  function escHtml(s) { return s.replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+  // Renders reason-history chips into #hrx-chips; clicking one fills the reason
+  // textarea. Call once after the panel is in the DOM.
+  function wireReasonChips(form, reasonId) {
+    var box = g('hrx-chips'); if (!box) return;
+    var hist = getReasonHistory(form);
+    if (!hist.length) { box.innerHTML = ''; return; }
+    box.innerHTML = hist.map(function (r, i) { return '<button type="button" class="hrx-chip" data-i="' + i + '">' + escHtml(r) + '</button>'; }).join('');
+    [].slice.call(box.querySelectorAll('.hrx-chip')).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var el = g(reasonId); el.value = hist[Number(btn.dataset.i)];
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+  }
+  // Prefill a <select> from the last value used for this form, if not already set.
+  function restoreLastType(form, typeId, sync) {
+    var lt = localStorage.getItem(lastTypeKey(form));
+    if (lt && g(typeId) && !g(typeId).value) { g(typeId).value = lt; sync(); }
+  }
+
+  /* ---------- optional parallel Google Calendar event ----------
+   * Opens Google Calendar's "render" quick-add page in a new tab, prefilled
+   * with the same date/time/reason as the leave/trip application — the user
+   * still has to click 儲存 there themselves, same "draft + human confirms"
+   * pattern as the rest of this script. No Google API/OAuth involved. */
+  function gcalPrefKey(form) { return 'hrx_gcal_' + form; }
+  function openGCalEvent(title, fd, ft, td, tt, details) {
+    function stamp(d, t) { return d.replace(/-/g, '') + 'T' + t.replace(':', '') + '00'; }
+    var qs = 'action=TEMPLATE&text=' + encodeURIComponent(title) +
+      '&dates=' + stamp(fd, ft) + '/' + stamp(td, tt) +
+      '&details=' + encodeURIComponent(details || '') + '&ctz=Asia%2FTaipei';
+    window.open('https://calendar.google.com/calendar/render?' + qs, '_blank');
+  }
+  function wireGCalToggle(form, checkboxId) {
+    var cb = g(checkboxId); if (!cb) return;
+    cb.checked = localStorage.getItem(gcalPrefKey(form)) === '1';
+    cb.addEventListener('change', function () {
+      try { localStorage.setItem(gcalPrefKey(form), cb.checked ? '1' : '0'); } catch (e) { }
+    });
+  }
+
   /* ---------- settings ----------
    * Settings (username / company) are NON-SECRET. We never store the password
    * anywhere — auto-login relies on the browser's own password manager
@@ -122,7 +185,10 @@
       '    <button data-p="am">上半天 (09:00–13:00)</button>' +
       '    <button data-p="pm">下半天 (14:00–18:00)</button></div>' +
       '  <div class="hrx-row"><div class="hrx-f" style="flex:1 1 100%"><label>請假事由</label>' +
-      '    <textarea id="hrx-reason" rows="2" placeholder="例如：家庭旅遊"></textarea></div></div>' +
+      '    <textarea id="hrx-reason" rows="2" placeholder="例如：家庭旅遊"></textarea>' +
+      '    <div class="hrx-chips" id="hrx-chips"></div></div></div>' +
+      '  <div class="hrx-row"><div class="hrx-f" style="flex:1 1 100%"><label class="hrx-check"><input type="checkbox" id="hrx-gcal"> 同時建立 Google 日曆事件（另開分頁，需自行按「儲存」）</label></div></div>' +
+      '  <div class="hrx-err" id="hrx-err" style="display:none"></div>' +
       '  <div class="hrx-act"><button class="hrx-primary" id="hrx-apply">送出申請</button>' +
       '    <button class="hrx-ghost" id="hrx-clear">清空</button>' +
       '    <button class="hrx-ghost" id="hrx-back">← 返回首頁</button></div>' +
@@ -161,7 +227,20 @@
       sync();
     });
     g('hrx-apply').addEventListener('click', function () {
+      var err = !g('hrx-type').value ? '請選擇假別'
+        : validateRange('hrx-fd', 'hrx-ft', 'hrx-td', 'hrx-tt')
+        || (!g('hrx-reason').value.trim() ? '請填寫請假事由' : null);
+      if (err) { showError(err); return; }
+      clearError();
       sync();
+      localStorage.setItem(lastTypeKey('SW0009'), g('hrx-type').value);
+      pushReasonHistory('SW0009', g('hrx-reason').value);
+      if (g('hrx-gcal').checked) {
+        var match = TYPES.filter(function (x) { return x[0] === g('hrx-type').value; })[0];
+        openGCalEvent('請假：' + (match ? match[1] : ''),
+          g('hrx-fd').value, g('hrx-ft').value, g('hrx-td').value, g('hrx-tt').value,
+          g('hrx-reason').value);
+      }
       // Reveal the native form FIRST, so the system's own confirmation / result
       // dialogs (which the overlay would otherwise cover) are visible.
       var p = g('hrx-panel'); if (p) p.style.display = 'none';
@@ -177,6 +256,10 @@
       native.forEach(function (el) { el.style.visibility = shown ? 'visible' : 'hidden'; });
       g('hrx-toggle').textContent = shown ? '◂ 回到新版介面' : '顯示原始介面 ▸';
     });
+
+    wireReasonChips('SW0009', 'hrx-reason');
+    wireGCalToggle('SW0009', 'hrx-gcal');
+    restoreLastType('SW0009', 'hrx-type', sync);
   }
 
   /* ================= SW0212 : 公出/出差 (full overlay) ================= */
@@ -205,7 +288,10 @@
       '    <button data-p="am">上半天 (09:00–13:00)</button>' +
       '    <button data-p="pm">下半天 (14:00–18:00)</button></div>' +
       '  <div class="hrx-row"><div class="hrx-f" style="flex:1 1 100%"><label>事由</label>' +
-      '    <textarea id="hrx-reason" rows="2" placeholder="例如：客戶拜訪 / 供應商稽核"></textarea></div></div>' +
+      '    <textarea id="hrx-reason" rows="2" placeholder="例如：客戶拜訪 / 供應商稽核"></textarea>' +
+      '    <div class="hrx-chips" id="hrx-chips"></div></div></div>' +
+      '  <div class="hrx-row"><div class="hrx-f" style="flex:1 1 100%"><label class="hrx-check"><input type="checkbox" id="hrx-gcal"> 同時建立 Google 日曆事件（另開分頁，需自行按「儲存」）</label></div></div>' +
+      '  <div class="hrx-err" id="hrx-err" style="display:none"></div>' +
       '  <div class="hrx-act"><button class="hrx-primary" id="hrx-apply">送出申請</button>' +
       '    <button class="hrx-ghost" id="hrx-clear">清空</button>' +
       '    <button class="hrx-ghost" id="hrx-back">← 返回首頁</button></div>' +
@@ -241,7 +327,20 @@
       sync();
     });
     g('hrx-apply').addEventListener('click', function () {
+      var err = !g('hrx-type').value ? '請選擇類別'
+        : validateRange('hrx-fd', 'hrx-ft', 'hrx-td', 'hrx-tt')
+        || (!g('hrx-reason').value.trim() ? '請填寫事由' : null);
+      if (err) { showError(err); return; }
+      clearError();
       sync();
+      localStorage.setItem(lastTypeKey('SW0212'), g('hrx-type').value);
+      pushReasonHistory('SW0212', g('hrx-reason').value);
+      if (g('hrx-gcal').checked) {
+        var match = TRIP_TYPES.filter(function (x) { return x[0] === g('hrx-type').value; })[0];
+        openGCalEvent((match ? match[1] : '公出/出差') + '：' + g('hrx-reason').value,
+          g('hrx-fd').value, g('hrx-ft').value, g('hrx-td').value, g('hrx-tt').value,
+          g('hrx-reason').value);
+      }
       // Reveal the native form FIRST, so the system's own confirmation / result
       // dialogs (which the overlay would otherwise cover) are visible.
       var p = g('hrx-panel'); if (p) p.style.display = 'none';
@@ -257,6 +356,10 @@
       native.forEach(function (el) { el.style.visibility = shown ? 'visible' : 'hidden'; });
       g('hrx-toggle').textContent = shown ? '◂ 回到新版介面' : '顯示原始介面 ▸';
     });
+
+    wireReasonChips('SW0212', 'hrx-reason');
+    restoreLastType('SW0212', 'hrx-type', sync);
+    wireGCalToggle('SW0212', 'hrx-gcal');
   }
 
   /* ================= SW0013 : 補卡/忘打卡 (full overlay) ================= */
@@ -278,7 +381,9 @@
       '    <div class="hrx-f"><label>補卡日期</label><input type="date" id="hrx-pd"></div>' +
       '    <div class="hrx-f"><label>補卡時間</label><input type="time" id="hrx-pt" step="60"></div></div>' +
       '  <div class="hrx-row"><div class="hrx-f" style="flex:1 1 100%"><label>事由</label>' +
-      '    <textarea id="hrx-reason" rows="2" placeholder="例如：忘記打下班卡"></textarea></div></div>' +
+      '    <textarea id="hrx-reason" rows="2" placeholder="例如：忘記打下班卡"></textarea>' +
+      '    <div class="hrx-chips" id="hrx-chips"></div></div></div>' +
+      '  <div class="hrx-err" id="hrx-err" style="display:none"></div>' +
       '  <div class="hrx-act"><button class="hrx-primary" id="hrx-apply">送出申請</button>' +
       '    <button class="hrx-ghost" id="hrx-clear">清空</button>' +
       '    <button class="hrx-ghost" id="hrx-back">← 返回首頁</button></div>' +
@@ -301,7 +406,14 @@
       ['hrx-type', 'hrx-pd', 'hrx-pt', 'hrx-reason'].forEach(function (id) { g(id).value = ''; }); sync();
     });
     g('hrx-apply').addEventListener('click', function () {
+      var err = !g('hrx-type').value ? '請選擇補卡類別'
+        : (!g('hrx-pd').value || !g('hrx-pt').value) ? '請填寫補卡日期與時間'
+        : (!g('hrx-reason').value.trim() ? '請填寫事由' : null);
+      if (err) { showError(err); return; }
+      clearError();
       sync();
+      localStorage.setItem(lastTypeKey('SW0013'), g('hrx-type').value);
+      pushReasonHistory('SW0013', g('hrx-reason').value);
       // Reveal the native form FIRST, so the system's own confirmation / result
       // dialogs (which the overlay would otherwise cover) are visible.
       var p = g('hrx-panel'); if (p) p.style.display = 'none';
@@ -317,6 +429,9 @@
       native.forEach(function (el) { el.style.visibility = shown ? 'visible' : 'hidden'; });
       g('hrx-toggle').textContent = shown ? '◂ 回到新版介面' : '顯示原始介面 ▸';
     });
+
+    wireReasonChips('SW0013', 'hrx-reason');
+    restoreLastType('SW0013', 'hrx-type', sync);
   }
 
   /* ================= SW0005 : OVERTIME (companion pickers) ================= */
@@ -374,6 +489,94 @@
     var btn = g('selectButton'); if (btn) btn.click();          // auto-load records needing explanation
   }
 
+  /* ============= EIP 預約管理 : 會議室預約 (companion pickers + reason chips) =============
+   * Runs inside eip.pesi.com.tw's am_view.htm mainFrame. Fields have no ids
+   * (only `name`), and the AM/PM hour <select> uses values like "AM 09" /
+   * "PM 05" with 0 as "AM 00" and noon as "PM 12" — quarter-hour minute
+   * options only (00/15/30/45). We add native date/time pickers next to the
+   * native selects (same non-invasive pattern as SW0005/SW0405) rather than
+   * a full overlay, since this is a shared cross-department resource booker
+   * we don't want to redesign wholesale. */
+  function byName(n) { return document.getElementsByName(n)[0]; }
+  function hourToSelectValue(h) {
+    if (h === 0) return 'AM 00';
+    if (h < 12) return 'AM ' + pad(h);
+    if (h === 12) return 'PM 12';
+    return 'PM ' + pad(h - 12);
+  }
+  function selectValueToHour(v) {
+    var m = /^([AP]M) (\d{2})$/.exec(v || ''); if (!m) return null;
+    var hh = Number(m[2]);
+    return m[1] === 'AM' ? hh : (hh === 12 ? 12 : hh + 12);
+  }
+  function ensureRoomStyle() {
+    if (g('hrx-comp-style')) return;
+    var s = document.createElement('style'); s.id = 'hrx-comp-style';
+    s.textContent = '.hrx-comp{margin-left:6px;font-size:14px;padding:4px 6px;border:1.5px solid #1558d6;border-radius:6px;vertical-align:middle}' +
+      '.hrx-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}' +
+      '.hrx-chip{border:1px solid #cdd5e4;background:#f7f9fd;color:#43506b;border-radius:14px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit}' +
+      '.hrx-chip:hover{border-color:#1558d6;color:#1558d6;background:#eef4ff}';
+    document.head.appendChild(s);
+  }
+  function enhanceRoomBooking() {
+    var rentDate = g('rentDate');
+    if (!rentDate || rentDate.dataset.hrxDone) return;
+    rentDate.dataset.hrxDone = '1';
+    ensureRoomStyle();
+
+    var dc = document.createElement('input');
+    dc.type = 'date'; dc.className = 'hrx-comp';
+    dc.value = rentDate.value.replace(/\//g, '-');
+    dc.addEventListener('change', function () {
+      var p = dc.value.split('-');
+      rentDate.value = p[0] + '/' + p[1] + '/' + p[2];
+      rentDate.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    rentDate.parentNode.insertBefore(dc, rentDate.nextSibling);
+
+    function timeCompanion(hrName, minName) {
+      var hrSel = byName(hrName), minSel = byName(minName);
+      if (!hrSel || !minSel) return;
+      var tc = document.createElement('input');
+      tc.type = 'time'; tc.step = '900'; tc.className = 'hrx-comp';
+      var h = selectValueToHour(hrSel.value);
+      if (h !== null) tc.value = pad(h) + ':' + (minSel.value || '00');
+      tc.addEventListener('change', function () {
+        var m = /^(\d{2}):(\d{2})/.exec(tc.value); if (!m) return;
+        var hh = Number(m[1]), mm = Math.round(Number(m[2]) / 15) * 15;
+        if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+        hrSel.value = hourToSelectValue(hh); hrSel.dispatchEvent(new Event('change', { bubbles: true }));
+        minSel.value = pad(mm); minSel.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      hrSel.parentNode.insertBefore(tc, minSel.nextSibling);
+    }
+    timeCompanion('hr1', 'min1');
+    timeCompanion('hr2', 'min2');
+
+    // reason-history quick-pick chips for the custom-purpose textarea
+    var useBox = byName('useBox');
+    if (useBox) {
+      var box = document.createElement('div'); box.className = 'hrx-chips';
+      useBox.parentNode.insertBefore(box, useBox.nextSibling);
+      var render = function () {
+        var hist = getReasonHistory('MEETING');
+        box.innerHTML = hist.map(function (r, i) {
+          return '<button type="button" class="hrx-chip" data-i="' + i + '">' + escHtml(r) + '</button>';
+        }).join('');
+        [].slice.call(box.querySelectorAll('.hrx-chip')).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            useBox.value = hist[Number(btn.dataset.i)];
+            useBox.dispatchEvent(new Event('input', { bubbles: true }));
+            var radios = document.getElementsByName('use');   // select the custom-text radio, not the common-phrase one
+            if (radios[1]) radios[1].checked = true;
+          });
+        });
+      };
+      render();
+      useBox.addEventListener('change', function () { pushReasonHistory('MEETING', useBox.value); render(); });
+    }
+  }
+
   /* ---------- shared overlay CSS ---------- */
   var OVERLAY_CSS =
     '<style>' +
@@ -399,6 +602,12 @@
     '.hrx-primary:hover{background:#0f47b3}' +
     '.hrx-ghost{flex:1;padding:14px;border:1.5px solid #cdd5e4;border-radius:10px;background:#fff;color:#43506b;font-size:15px;cursor:pointer;font-family:inherit}' +
     '.hrx-toggle{position:fixed;top:12px;right:16px;font-size:12px;color:#8a93a6;background:#fff;border:1px solid #dde3ee;border-radius:20px;padding:6px 12px;cursor:pointer;z-index:100000}' +
+    '.hrx-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}' +
+    '.hrx-chip{border:1px solid #cdd5e4;background:#f7f9fd;color:#43506b;border-radius:14px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit}' +
+    '.hrx-chip:hover{border-color:#1558d6;color:#1558d6;background:#eef4ff}' +
+    '.hrx-err{background:#fdecea;border:1px solid #f5b5b0;color:#a33;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px}' +
+    '.hrx-check{display:flex!important;align-items:center;gap:8px;font-weight:400!important;cursor:pointer}' +
+    '.hrx-check input{min-height:auto!important;width:auto!important;padding:0!important}' +
     '</style>';
 
   /* ============ LOGIN (Index.html, logged-out) : username/company prefill ============ */
@@ -438,4 +647,7 @@
   else if (FORM === 'SW0037') ready(function () { return g('start_date') && g('select_btn'); }, enhanceQuery);
   else if (FORM === 'SW0405') ready(function () { return g('punch_date_st') && g('selectButton'); }, enhanceExplain);
   else if (!FORM && /Index\.html/i.test(PATH) && window.top === window.self) runHome();
+  else if (location.hostname === 'eip.pesi.com.tw') {
+    ready(function () { return g('rentDate') && byName('hr1'); }, enhanceRoomBooking);
+  }
 })();
