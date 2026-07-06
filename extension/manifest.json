@@ -1,29 +1,29 @@
 {
   "manifest_version": 3,
   "name": "百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)",
-  "version": "0.8.2",
-  "description": "Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 forms, a dashboard 考勤異常 batch handler, a toolbar button that opens the 出缺勤系統首頁, login username/company prefill, and optional background 考勤異常 desktop notifications (using your existing session — no password stored). Drives the original fields underneath — no server changes.",
+  "version": "0.12.1",
+  "description": "Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 forms and the EIP 預約管理 module, one-click shortcuts to 請假/公出出差/忘記打卡 forms plus today's 刷卡資料, an optional parallel Google Calendar event for 請假/公出/出差, and login username/company prefill (never the password). Drives the original fields underneath — no server changes.",
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "開啟 PESI 出缺勤系統首頁",
+    "default_title": "PESI 出缺勤 / 會議室預約",
+    "default_popup": "popup.html",
     "default_icon": {
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
+  "permissions": [
+    "scripting"
+  ],
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": [
-    "storage",
-    "notifications",
-    "alarms"
-  ],
   "host_permissions": [
-    "https://hr.pesi.com.tw/*"
+    "https://hr.pesi.com.tw/*",
+    "https://eip.pesi.com.tw/*"
   ],
   "content_scripts": [
     {
@@ -35,6 +35,16 @@
         "https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0212/SW0212.html*",
         "https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0013/SW0013.html*",
         "https://hr.pesi.com.tw/htmlworkflow/webflow_forms/SW0405/SW0405.html*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://eip.pesi.com.tw/tw/am/am_view.htm*"
       ],
       "js": [
         "content.js"

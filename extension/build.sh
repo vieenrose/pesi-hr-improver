@@ -13,7 +13,7 @@ OUT="dist"
 rm -rf "$OUT"; mkdir -p "$OUT/chrome/icons" "$OUT/firefox/icons"
 
 # ---- Chrome package ----
-cp manifest.json content.js background.js "$OUT/chrome/"
+cp manifest.json content.js background.js popup.html popup.js "$OUT/chrome/"
 cp icons/icon48.png icons/icon128.png "$OUT/chrome/icons/"
 ( cd "$OUT/chrome" && zip -qr "../pesi-hr-chrome-$VERSION.zip" . )
 
@@ -29,7 +29,7 @@ if "background" in m and "service_worker" in m["background"]:
     m["background"] = {"scripts": [m["background"]["service_worker"]]}
 json.dump(m, open("dist/firefox/manifest.json", "w"), ensure_ascii=False, indent=2)
 PY
-cp content.js background.js "$OUT/firefox/"
+cp content.js background.js popup.html popup.js "$OUT/firefox/"
 cp icons/icon48.png icons/icon128.png "$OUT/firefox/icons/"
 ( cd "$OUT/firefox" && zip -qr "../pesi-hr-firefox-$VERSION.zip" . )
 
