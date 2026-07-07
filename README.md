@@ -6,7 +6,8 @@
 
 > 目前版本：**v0.13.0**
 >
-> 📖 完整操作說明請見 **[使用手冊（docs/USER_GUIDE.zh-TW.md）](docs/USER_GUIDE.zh-TW.md)**。
+> 📖 完整操作說明請見 **[使用手冊（docs/USER_GUIDE.zh-TW.md）](docs/USER_GUIDE.zh-TW.md)**，
+> 或開啟含畫面示意的 **[圖文版手冊（docs/user-guide.html）](docs/user-guide.html)**（可直接以瀏覽器開啟）。
 
 ---
 

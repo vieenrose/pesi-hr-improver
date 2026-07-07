@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使用手冊 — 百一電子 表單流程 UX 增強</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --surface-2:#eef1f5; --border:#dde2e9;
+    --text:#1b2430; --muted:#5b6675; --accent:#2f6fed; --accent-weak:#e7efff;
+    --good:#1f9d57; --in:#2f6fed; --out:#d63d4a; --amber-bg:#fff4d6; --amber-tx:#7a5a00; --amber-br:#e7cf8a;
+    --gold-a:#d9b04a; --gold-b:#b8892a;
+    --radius:14px; --radius-sm:9px;
+    --maxw:1180px;
+    --shadow:0 1px 2px rgba(20,30,45,.06), 0 8px 24px rgba(20,30,45,.06);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --cjk:"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f141b; --surface:#171e27; --surface-2:#1e2731; --border:#2a343f;
+      --text:#e6ebf2; --muted:#9aa7b6; --accent:#5b8cff; --accent-weak:#16243d;
+      --good:#41c47c; --in:#6ea0ff; --out:#ff6b78; --amber-bg:#332a0f; --amber-tx:#e9cf86; --amber-br:#5a4a1c;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f7f9; --surface:#ffffff; --surface-2:#eef1f5; --border:#dde2e9;
+    --text:#1b2430; --muted:#5b6675; --accent:#2f6fed; --accent-weak:#e7efff;
+    --good:#1f9d57; --in:#2f6fed; --out:#d63d4a; --amber-bg:#fff4d6; --amber-tx:#7a5a00; --amber-br:#e7cf8a;
+    --shadow:0 1px 2px rgba(20,30,45,.06), 0 8px 24px rgba(20,30,45,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f141b; --surface:#171e27; --surface-2:#1e2731; --border:#2a343f;
+    --text:#e6ebf2; --muted:#9aa7b6; --accent:#5b8cff; --accent-weak:#16243d;
+    --good:#41c47c; --in:#6ea0ff; --out:#ff6b78; --amber-bg:#332a0f; --amber-tx:#e9cf86; --amber-br:#5a4a1c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--cjk);
+    line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  code,kbd{font-family:var(--mono);font-size:.86em}
+  kbd{background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+
+  /* ---- shell ---- */
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  header.top{border-bottom:1px solid var(--border);background:
+    linear-gradient(180deg,var(--surface),var(--bg));}
+  .top .wrap{padding-top:46px;padding-bottom:40px;display:flex;flex-direction:column;gap:18px}
+  .eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;display:flex;align-items:center;gap:10px}
+  .eyebrow .ver{background:var(--accent-weak);color:var(--accent);border:1px solid var(--border);
+    padding:2px 9px;border-radius:999px;letter-spacing:.04em}
+  h1{margin:0;font-size:clamp(28px,4.2vw,44px);line-height:1.15;font-weight:800;
+    letter-spacing:-.01em;text-wrap:balance}
+  .lede{margin:0;max-width:60ch;color:var(--muted);font-size:clamp(15px,1.8vw,18px)}
+  .redbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:4px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:12px 16px;box-shadow:var(--shadow);font-size:13.5px;color:var(--muted)}
+  .redbar b{color:var(--text)}
+  .redkey{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--border);
+    border-radius:6px;padding:1px 7px;color:var(--text)}
+
+  /* ---- layout w/ sidebar ---- */
+  .layout{display:grid;grid-template-columns:1fr;gap:0}
+  @media(min-width:940px){
+    .layout{grid-template-columns:232px minmax(0,1fr);gap:48px;align-items:start}
+  }
+  nav.toc{position:sticky;top:0;align-self:start;padding:28px 0;display:none}
+  @media(min-width:940px){nav.toc{display:block;max-height:100vh;overflow:auto}}
+  nav.toc .lbl{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;padding:0 12px 8px}
+  nav.toc ol{list-style:none;margin:0;padding:0;counter-reset:s}
+  nav.toc a{display:flex;gap:10px;align-items:baseline;padding:7px 12px;border-radius:8px;
+    color:var(--muted);font-size:14px;line-height:1.35}
+  nav.toc a:hover{background:var(--surface-2);color:var(--text);text-decoration:none}
+  nav.toc a .n{counter-increment:s;font-family:var(--mono);font-size:12px;color:var(--accent);
+    min-width:16px;text-align:right}
+  nav.toc a .n::before{content:counter(s,decimal-leading-zero)}
+
+  main{padding:8px 0 90px}
+  section.feat{padding:38px 0;border-top:1px solid var(--border)}
+  section.feat:first-child{border-top:0}
+  .feat h2{margin:0 0 6px;font-size:clamp(20px,2.6vw,27px);font-weight:750;letter-spacing:-.01em;
+    display:flex;align-items:center;gap:12px;text-wrap:balance}
+  .feat h2 .idx{font-family:var(--mono);font-size:14px;color:#fff;background:var(--accent);
+    min-width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:8px;font-weight:700;flex:none}
+  .feat .sub{color:var(--muted);margin:0 0 20px;max-width:64ch}
+  .feat p{max-width:64ch}
+  .grid2{display:grid;gap:26px}
+  @media(min-width:720px){.grid2{grid-template-columns:1fr 1fr;align-items:start}}
+
+  ol.steps{counter-reset:st;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  ol.steps li{position:relative;padding-left:40px;max-width:60ch}
+  ol.steps li::before{counter-increment:st;content:counter(st);position:absolute;left:0;top:-1px;
+    width:26px;height:26px;border-radius:50%;background:var(--accent-weak);color:var(--accent);
+    border:1px solid var(--border);font-family:var(--mono);font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center}
+  ul.plain{margin:0;padding-left:18px}
+  ul.plain li{margin:4px 0;max-width:60ch}
+
+  .note{border-left:3px solid var(--accent);background:var(--surface-2);padding:12px 16px;
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0;color:var(--muted);font-size:14.5px;margin-top:18px}
+  .note b{color:var(--text)}
+  .note.warn{border-left-color:var(--out)}
+
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0}
+  .tag{font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:999px;padding:3px 11px;color:var(--muted)}
+
+  table.k{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:6px}
+  table.k th,table.k td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  table.k th{color:var(--muted);font-weight:600;font-size:12.5px;letter-spacing:.04em}
+  table.k td:first-child{white-space:nowrap;font-weight:650}
+
+  /* =========================================================
+     MOCKUP "SCREENSHOT" DEVICES
+     ========================================================= */
+  .shot{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+    box-shadow:var(--shadow);background:var(--surface)}
+  .shot .chrome{display:flex;align-items:center;gap:7px;padding:9px 12px;background:var(--surface-2);
+    border-bottom:1px solid var(--border)}
+  .shot .chrome i{width:11px;height:11px;border-radius:50%;background:var(--border);display:block}
+  .shot .chrome .url{margin-left:8px;font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px 10px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .shot figcaption{padding:9px 14px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--border);
+    background:var(--surface)}
+  figure{margin:0}
+
+  /* --- HR home / dashboard mock --- */
+  .hr{background:linear-gradient(120deg,#cfe0e6,#7fa6bd);padding:0;color:#22303a}
+  .hr .bar{background:#3a3f45;color:#e9edf1;display:flex;gap:20px;align-items:center;
+    padding:7px 14px;font-size:12.5px}
+  .hr .bar .r{margin-left:auto;color:#cfd6dd;font-size:11px}
+  .hr .notice{margin:12px;background:var(--amber-bg);border:1px solid var(--amber-br);color:var(--amber-tx);
+    border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600}
+  .hr .notice .pill{background:#e8892a;color:#fff;border-radius:999px;min-width:18px;height:18px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .hr .notice .btn{margin-left:auto;background:#2f6fed;color:#fff;border-radius:6px;padding:3px 10px;font-size:11.5px}
+  .hr .balance{margin:0 12px;background:#fdf6e3;border:1px solid #efe4bf;border-radius:8px;
+    padding:8px 12px;color:#8a2b5f;font-size:12px;text-align:center}
+  .hr .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px}
+  .hr .tile{background:linear-gradient(180deg,var(--gold-a),var(--gold-b));color:#fff;
+    border-radius:7px;padding:14px 8px;text-align:center;font-size:13px;line-height:1.35;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35);font-weight:600}
+  .hr .tile.wide{grid-column:span 1}
+  .hr .panel{margin:6px 12px 14px;background:#fbf6ea;border:1px solid #ecdfbf;border-radius:10px;overflow:hidden}
+  .hr .panel .ph{display:flex;align-items:center;gap:9px;padding:9px 12px;font-weight:700;font-size:13px;color:#4a3b12}
+  .hr .panel .ph .b{background:#e8892a;color:#fff;border-radius:50%;width:18px;height:18px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .hr table.an{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+  .hr table.an th,.hr table.an td{text-align:left;padding:7px 12px;border-top:1px solid #eee;color:#333}
+  .hr table.an th{background:#faf7ef;color:#7a6a3a;font-weight:600}
+  .hr table.an a{color:#2f6fed}
+
+  /* --- dark form overlay mock (SW00xx) --- */
+  .ov{background:#10131a;color:#e7ecf3;padding:20px 20px 22px}
+  .ov .h{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+  .ov .h .t{font-size:17px;font-weight:750}
+  .ov .h .sw{font-size:11.5px;color:#8b96a5;font-family:var(--mono)}
+  .ov .revert{float:right;font-size:11px;color:#9fb3d6;border:1px solid #2c3a52;border-radius:999px;
+    padding:2px 10px}
+  .ov label.f{display:block;font-size:11.5px;color:#aeb8c6;margin:14px 0 5px;font-weight:600}
+  .ov .fld,.ov select.fld{width:100%;background:#191f29;border:1px solid #2b3340;border-radius:8px;
+    padding:9px 11px;color:#e7ecf3;font-size:13px;font-family:var(--cjk)}
+  .ov .fld.ph{color:#6b7788}
+  .ov .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ov .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .ov .chip{border:1px solid #3d7bff;color:#a9c6ff;border-radius:8px;padding:5px 11px;font-size:12px;background:#131b2b}
+  .ov .rchip{border:1px solid #333c49;color:#b9c2cf;border-radius:999px;padding:3px 10px;font-size:11.5px;background:#161c25}
+  .ov .gcal{display:flex;align-items:center;gap:9px;margin-top:18px;font-size:12.5px;color:#c7d0db}
+  .ov .gcal .box{width:15px;height:15px;border:1px solid #3d7bff;border-radius:4px;background:#131b2b;
+    display:inline-flex;align-items:center;justify-content:center;color:#6ea0ff;font-size:11px;flex:none}
+  .ov .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .ov .btn{border-radius:9px;padding:9px 16px;font-size:13px;font-weight:650}
+  .ov .btn.p{background:#2f6fed;color:#fff}
+  .ov .btn.g{background:#171d27;color:#cdd6e2;border:1px solid #2b3340}
+
+  /* --- toolbar popup mock --- */
+  .pop{max-width:300px;margin:0 auto;background:var(--surface);padding:14px}
+  .pop .pt{font-size:13px;font-weight:750;margin:2px 2px 12px;display:flex;align-items:center;gap:8px}
+  .pop .pbtns{display:grid;gap:8px}
+  .pop .pb{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;font-size:13.5px;font-weight:600;background:var(--surface-2)}
+  .pop .pb.acc{background:var(--accent);color:#fff;border-color:transparent}
+  .pop .pb .ic{width:18px;text-align:center}
+  .pop .pb small{margin-left:auto;color:var(--muted);font-weight:500;font-size:11.5px}
+  .pop .pb.acc small{color:rgba(255,255,255,.8)}
+
+  /* --- swipe result mock --- */
+  .swipe{max-width:320px;margin:0 auto;background:var(--surface);padding:16px}
+  .swipe .st{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .swipe .io{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:750;
+    font-variant-numeric:tabular-nums;justify-content:center;margin-bottom:12px}
+  .swipe .io .in{color:var(--in)} .swipe .io .out{color:var(--out)}
+  .swipe .io .ar{color:var(--muted);font-size:15px}
+  .swipe .io .cap{font-size:11px;color:var(--muted);font-weight:600;display:block}
+  .swipe .all{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+    border-top:1px dashed var(--border);padding-top:12px}
+  .swipe .all .t{font-family:var(--mono);font-size:12px;color:var(--text);font-variant-numeric:tabular-nums}
+  .swipe .all .t.i{color:var(--in)} .swipe .all .t.o{color:var(--out)}
+  .swipe .all .dot{color:var(--muted)}
+
+  /* --- EIP booking mock --- */
+  .eip{background:#0e1116;color:#dfe5ee;padding:20px}
+  .eip .rt{font-size:13px;font-weight:700;color:#cfd6e0;margin-bottom:14px}
+  .eip .line{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;margin:10px 0;font-size:12.5px}
+  .eip .line .lab{color:#9aa6b4}
+  .eip .box{background:#171d26;border:1px solid #2a323e;border-radius:7px;padding:7px 10px;color:#e7ecf3;font-size:12.5px}
+  .eip .inl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .eip .add{border:1px solid #3d7bff;color:#a9c6ff;background:#131b2b;border-radius:7px;padding:6px 10px;font-size:12px}
+  .eip .chip{border:1px solid #333c49;color:#b9c2cf;border-radius:999px;padding:3px 10px;font-size:11.5px;background:#161c25}
+  .eip .foot{display:flex;gap:16px;justify-content:flex-end;margin-top:16px;color:#cfd6e0;font-size:13px;font-weight:600}
+
+  .callout{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 20px;box-shadow:var(--shadow)}
+  .callout h3{margin:0 0 8px;font-size:15px}
+  .faqq{font-weight:700;margin:16px 0 3px}
+  .faqq:first-child{margin-top:0}
+  .faqa{color:var(--muted);max-width:66ch;margin:0}
+
+  footer{border-top:1px solid var(--border);color:var(--muted);font-size:13px;padding:26px 0 40px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
+
+  @media (prefers-reduced-motion:no-preference){
+    html{scroll-behavior:smooth}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">使用手冊 <span class="ver">v0.13.0 · main</span></div>
+    <h1>百一電子 表單流程 UX 增強</h1>
+    <p class="lede">把舊版 HR 考勤系統與 EIP 預約，換上現代、好按、適合手機的介面。完全在你的瀏覽器端運作，停用後每張表單原樣還原 —— 不動伺服器、不碰密碼。</p>
+    <div class="redbar">
+      <span>🔒 手冊內所有畫面已遮蔽個人資料：</span>
+      <span>員工代號 <span class="redkey">A000</span></span>
+      <span>姓名 <span class="redkey">王小明</span></span>
+      <span>假別餘額 <span class="redkey">●天</span></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="layout">
+    <nav class="toc" aria-label="目錄">
+      <div class="lbl">目錄</div>
+      <ol>
+        <li><a href="#s1"><span class="n"></span><span>首頁與考勤異常儀表板</span></a></li>
+        <li><a href="#s2"><span class="n"></span><span>請假申請（含 Google 日曆）</span></a></li>
+        <li><a href="#s3"><span class="n"></span><span>公出／出差申請</span></a></li>
+        <li><a href="#s4"><span class="n"></span><span>忘打卡／補卡申請</span></a></li>
+        <li><a href="#s5"><span class="n"></span><span>工具列快捷選單</span></a></li>
+        <li><a href="#s6"><span class="n"></span><span>查詢今日刷卡</span></a></li>
+        <li><a href="#s7"><span class="n"></span><span>EIP 預約管理</span></a></li>
+        <li><a href="#s8"><span class="n"></span><span>背景通知</span></a></li>
+        <li><a href="#s9"><span class="n"></span><span>常見問題</span></a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- 1 -->
+      <section class="feat" id="s1">
+        <h2><span class="idx">1</span>首頁與考勤異常儀表板</h2>
+        <p class="sub">登入 <code>hr.pesi.com.tw</code> 後，擴充功能會在原本首頁上疊加一層待辦提示，讓你一眼看到需要補件的考勤異常。</p>
+        <div class="grid2">
+          <div>
+            <ul class="plain">
+              <li>頂端 <b>「有 N 筆考勤異常待處理」</b> 提示列，右側 <b>批次處理►</b> 按鈕。</li>
+              <li>下方 <b>考勤異常通知</b> 清單：員工代號、姓名、考勤日期、過濾條件。</li>
+              <li>藍色連結（如「有缺勤時數無請假單時數」）可直接點進對應的補件表單。</li>
+              <li>右下角可切換 <b>背景通知</b>（見第 8 節）。</li>
+            </ul>
+            <div class="note">上一年度／本年度特休餘額仍顯示於頂端跑馬燈，此處以 <span class="redkey">●天</span> 遮蔽。</div>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">hr.pesi.com.tw/HtmlWorkFlow/Index.html</span></div>
+            <div class="hr">
+              <div class="bar"><span>系統</span><span>考勤表單流程</span><span>報表</span><span>登出</span><span class="r">[A000](A01) 百一電子股份有限公司</span></div>
+              <div class="notice"><span>⚠️</span><span class="pill">1</span><span>有 1 筆考勤異常待處理</span><span class="btn">批次處理►</span></div>
+              <div class="balance">※上年度剩餘特休：●天　本年度新增特休：●天　已休特休：●天</div>
+              <div class="tiles">
+                <div class="tile">加班<br>申請</div><div class="tile">請假<br>申請</div><div class="tile">忘打卡<br>申請</div>
+                <div class="tile">加班<br>查詢</div><div class="tile">請假<br>查詢</div><div class="tile">公出/出差<br>申請</div>
+              </div>
+              <div class="panel">
+                <div class="ph"><span class="b">2</span>考勤異常通知</div>
+                <table class="an">
+                  <thead><tr><th>員工代號</th><th>員工姓名</th><th>考勤日期</th><th>過濾條件</th></tr></thead>
+                  <tbody>
+                    <tr><td>A000</td><td>王小明</td><td>2026/06/25</td><td>加班單時數小於卡鐘時數[不加班說明](27)</td></tr>
+                    <tr><td>A000</td><td>王小明</td><td>2026/07/06</td><td><a href="#s1">有缺勤時數無請假單時數(2)</a></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <figcaption>首頁疊加的考勤異常儀表板（資料已遮蔽）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="feat" id="s2">
+        <h2><span class="idx">2</span>請假申請（含 Google 日曆）</h2>
+        <p class="sub">從首頁 <b>請假／申請</b> 或工具列選單的 <b>請假</b> 進入。表單代號 SW0009。</p>
+        <div class="grid2">
+          <div>
+            <ol class="steps">
+              <li><b>假別</b>：從重新排序後的下拉挑選（特休、事假、病假…）。</li>
+              <li><b>開始／結束日期</b>：用瀏覽器原生日期選擇器，不必手動換算民國年。</li>
+              <li><b>時段快捷</b>：一鍵套用 全天／上半天／下半天。</li>
+              <li><b>請假事由</b>：常用事由會被記住，下次以標籤一鍵帶入。</li>
+              <li>（選用）勾選 <b>同時建立 Google 日曆事件</b>。</li>
+              <li>按 <b>送出申請</b>；系統原本的確認畫面照常顯示。</li>
+            </ol>
+            <div class="note"><b>Google 日曆：</b>送出時會另開一個「建立活動」預填分頁，並帶入標題、起訖時間、事由 —— 你需在該分頁自行按「儲存」。不涉及任何 Google 授權或 API。</div>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">hr.pesi.com.tw · 請假申請</span></div>
+            <div class="ov">
+              <span class="revert">顯示原始介面►</span>
+              <div class="h"><span class="t">🌴 請假申請</span><span class="sw">表單 SW0009</span></div>
+              <label class="f">假別</label>
+              <select class="fld"><option>特休</option></select>
+              <div class="row">
+                <div><label class="f">開始日期</label><div class="fld">2026/07/10</div></div>
+                <div><label class="f">開始時間</label><div class="fld">09:00</div></div>
+              </div>
+              <div class="row">
+                <div><label class="f">結束日期</label><div class="fld">2026/07/10</div></div>
+                <div><label class="f">結束時間</label><div class="fld">18:00</div></div>
+              </div>
+              <div class="chips"><span class="chip">全天 (09:00–18:00)</span><span class="chip">上半天 (09:00–13:00)</span><span class="chip">下半天 (14:00–18:00)</span></div>
+              <label class="f">請假事由</label>
+              <div class="fld" style="min-height:44px">家庭旅遊</div>
+              <div class="chips" style="margin-top:8px"><span class="rchip">家庭旅遊</span><span class="rchip">個人事務</span><span class="rchip">回診</span></div>
+              <div class="gcal"><span class="box">✓</span>同時建立 Google 日曆事件（另開分頁，需自行按「儲存」）</div>
+              <div class="actions"><span class="btn p">送出申請</span><span class="btn g">清空</span><span class="btn g">← 返回首頁</span></div>
+            </div>
+            <figcaption>請假申請優化介面，含常用事由標籤與 Google 日曆選項。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="feat" id="s3">
+        <h2><span class="idx">3</span>公出／出差申請</h2>
+        <p class="sub">從首頁 <b>公出/出差／申請</b> 或工具列選單的 <b>公出出差</b> 進入。表單代號 SW0212。操作與請假相同，多一個「類別」選擇。</p>
+        <div class="grid2">
+          <div>
+            <ul class="plain">
+              <li><b>類別</b>：選擇「公出」或「出差」。</li>
+              <li>日期、時間、時段快捷、事由、Google 日曆選項皆與請假一致。</li>
+            </ul>
+            <div class="tags"><span class="tag">原生日期／時間選擇器</span><span class="tag">時段快捷</span><span class="tag">事由記憶</span><span class="tag">Google 日曆</span></div>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">hr.pesi.com.tw · 公出／出差申請</span></div>
+            <div class="ov">
+              <div class="h"><span class="t">🚗 公出／出差申請</span><span class="sw">表單 SW0212</span></div>
+              <label class="f">類別</label>
+              <select class="fld"><option>公出（a13）</option></select>
+              <div class="row">
+                <div><label class="f">開始日期</label><div class="fld">2026/07/11</div></div>
+                <div><label class="f">開始時間</label><div class="fld">09:00</div></div>
+              </div>
+              <div class="row">
+                <div><label class="f">結束日期</label><div class="fld">2026/07/11</div></div>
+                <div><label class="f">結束時間</label><div class="fld">18:00</div></div>
+              </div>
+              <div class="chips"><span class="chip">全天</span><span class="chip">上半天</span><span class="chip">下半天</span></div>
+              <label class="f">事由</label>
+              <div class="fld ph">例：客戶拜訪 / 供應商稽核</div>
+              <div class="actions"><span class="btn p">送出申請</span><span class="btn g">清空</span></div>
+            </div>
+            <figcaption>公出／出差優化介面（SW0212）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section class="feat" id="s4">
+        <h2><span class="idx">4</span>忘打卡／補卡申請</h2>
+        <p class="sub">從首頁 <b>忘打卡／申請</b> 或工具列選單的 <b>忘記打卡</b> 進入。表單代號 SW0013。</p>
+        <div class="grid2">
+          <div>
+            <ul class="plain">
+              <li><b>打卡類型</b>：上班／下班。</li>
+              <li><b>日期／時間</b>：原生選擇器。</li>
+              <li><b>事由</b>：輸入補卡原因。</li>
+            </ul>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">hr.pesi.com.tw · 忘打卡申請</span></div>
+            <div class="ov">
+              <div class="h"><span class="t">🕒 忘打卡申請</span><span class="sw">表單 SW0013</span></div>
+              <label class="f">打卡類型</label>
+              <select class="fld"><option>上班</option></select>
+              <div class="row">
+                <div><label class="f">補卡日期</label><div class="fld">2026/07/07</div></div>
+                <div><label class="f">補卡時間</label><div class="fld">09:02</div></div>
+              </div>
+              <label class="f">事由</label>
+              <div class="fld ph">例：忘記刷卡</div>
+              <div class="actions"><span class="btn p">送出申請</span><span class="btn g">清空</span></div>
+            </div>
+            <figcaption>補卡申請優化介面（SW0013）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="feat" id="s5">
+        <h2><span class="idx">5</span>工具列快捷選單</h2>
+        <p class="sub">點瀏覽器右上角的擴充功能圖示，彈出快捷選單 —— 不必先進首頁再一層層點。</p>
+        <div class="grid2">
+          <div>
+            <table class="k">
+              <tr><th>按鈕</th><th>功能</th></tr>
+              <tr><td>出缺勤系統</td><td>開啟 HR 首頁（已開啟則切換分頁）</td></tr>
+              <tr><td>預約管理</td><td>開啟 EIP 預約模組</td></tr>
+              <tr><td>請假</td><td>直接開啟請假申請表單</td></tr>
+              <tr><td>公出出差</td><td>直接開啟公出／出差表單</td></tr>
+              <tr><td>忘記打卡</td><td>直接開啟補卡申請表單</td></tr>
+              <tr><td>查詢今日刷卡</td><td>顯示今日刷卡進出（見第 6 節）</td></tr>
+            </table>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">擴充功能彈出視窗</span></div>
+            <div class="pop">
+              <div class="pt">🗂️ PESI 出缺勤 / 預約</div>
+              <div class="pbtns">
+                <div class="pb acc"><span class="ic">🏠</span>出缺勤系統</div>
+                <div class="pb acc"><span class="ic">📅</span>預約管理</div>
+                <div class="pb"><span class="ic">🌴</span>請假<small>SW0009</small></div>
+                <div class="pb"><span class="ic">🚗</span>公出出差<small>SW0212</small></div>
+                <div class="pb"><span class="ic">🕒</span>忘記打卡<small>SW0013</small></div>
+                <div class="pb"><span class="ic">🔎</span>查詢今日刷卡</div>
+              </div>
+            </div>
+            <figcaption>工具列快捷選單（示意）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section class="feat" id="s6">
+        <h2><span class="idx">6</span>查詢今日刷卡</h2>
+        <p class="sub">在工具列選單按 <b>查詢今日刷卡</b>，擴充功能會在背景查出今天的刷卡資料並整理顯示。</p>
+        <div class="grid2">
+          <div>
+            <ul class="plain">
+              <li><b>上班 → 下班</b>：當日第一筆與最後一筆，上班藍色、下班紅色。</li>
+              <li>下方列出今天所有進出時間，依時間排序、以圓點分隔。</li>
+              <li>若當日尚無刷卡，顯示「查無資料」。</li>
+            </ul>
+            <div class="note">多筆進出（例如中午外出）也會完整列出，方便核對是否漏刷。</div>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">今日刷卡資料</span></div>
+            <div class="swipe">
+              <div class="st">2026/07/07 · 共 4 筆刷卡</div>
+              <div class="io"><span><span class="cap">上班</span><span class="in">09:01</span></span><span class="ar">→</span><span><span class="cap">下班</span><span class="out">18:32</span></span></div>
+              <div class="all">
+                <span class="t i">09:01</span><span class="dot">·</span>
+                <span class="t o">12:03</span><span class="dot">·</span>
+                <span class="t i">13:05</span><span class="dot">·</span>
+                <span class="t o">18:32</span>
+              </div>
+            </div>
+            <figcaption>今日刷卡結果（示意資料）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="feat" id="s7">
+        <h2><span class="idx">7</span>EIP 預約管理</h2>
+        <p class="sub">在工具列選單按 <b>預約管理</b>，進入 EIP（<code>eip.pesi.com.tw</code>）預約模組。從左側資源樹選擇 <b>會議室 / 公務車 / 來賓車位</b>，再開啟預約表單。</p>
+        <div class="grid2">
+          <div>
+            <p>擴充功能在會議室預約表單上額外提供：</p>
+            <ul class="plain">
+              <li><b>預約日期</b> 旁的日期選擇器。</li>
+              <li>起訖 <b>時間</b> 的時間選擇器（對應原本 AM/PM 時／分下拉）。</li>
+              <li><b>事由</b> 常用文字的記憶標籤。</li>
+            </ul>
+            <div class="note warn"><b>不會自動送出：</b>擴充功能只填欄位，一律由你確認後自行按 EIP 的 <b>OK</b>。</div>
+          </div>
+          <figure class="shot">
+            <div class="chrome"><i></i><i></i><i></i><span class="url">eip.pesi.com.tw/tw/am/am_view.htm</span></div>
+            <div class="eip">
+              <div class="rt">Resource Information · 會議室預約</div>
+              <div class="line"><span class="lab">預約日期</span><span class="box">2026/07/09　📅</span></div>
+              <div class="line"><span class="lab">時間</span><span class="inl"><span class="box">14:00 🕒</span><span style="color:#9aa6b4">到</span><span class="box">15:00 🕒</span></span></div>
+              <div class="line"><span class="lab">聯絡分機</span><span class="box">1234</span></div>
+              <div class="line"><span class="lab">事由</span><span class="inl"><span class="box" style="min-width:160px">部門週會</span><span class="add">＋加入常用</span></span></div>
+              <div class="line"><span class="lab"></span><span class="inl"><span class="chip">部門週會</span><span class="chip">面試</span><span class="chip">供應商簡報</span></span></div>
+              <div class="foot"><span>OK</span><span>Reset</span><span>Cancel</span></div>
+            </div>
+            <figcaption>EIP 會議室預約表單，加上日期／時間選擇器與事由標籤（示意）。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="feat" id="s8">
+        <h2><span class="idx">8</span>背景通知</h2>
+        <p class="sub">擴充功能可在背景定時檢查考勤異常，並以桌面通知提醒；首頁右下角的 <b>背景通知：開／關</b> 可切換。</p>
+        <div class="callout">
+          <ul class="plain">
+            <li>首次啟用時，瀏覽器會要求 <b>通知</b> 權限。</li>
+            <li>點擊桌面通知會帶你回到考勤異常清單。</li>
+            <li>使用 <code>storage</code>、<code>notifications</code>、<code>alarms</code> 權限。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section class="feat" id="s9">
+        <h2><span class="idx">9</span>常見問題</h2>
+        <div class="callout">
+          <p class="faqq">Google 日曆整合需要授權我的 Google 帳號嗎？</p>
+          <p class="faqa">不需要。它只是組出一個 Google 日曆「建立活動」的預填網址並另開分頁，沒有任何 OAuth 或 API。你必須在該分頁自行按「儲存」，活動才會真正建立。</p>
+          <p class="faqq">擴充功能會不會把我的密碼存起來？</p>
+          <p class="faqa">不會。登入輔助只帶入 <b>帳號與公司代號</b>，<b>絕不處理密碼</b> —— 密碼一律交給瀏覽器自己的密碼管理員。</p>
+          <p class="faqq">停用擴充功能後表單會怎樣？</p>
+          <p class="faqa">所有表單原封不動地還原成原本樣子。擴充功能只在你的瀏覽器端疊加介面，不更動伺服器。</p>
+          <p class="faqq">某張表單的優化不見了？</p>
+          <p class="faqa">若廠商（日城資訊）改了該表單的欄位 ID，該表單的優化可能需要更新；其餘表單不受影響、仍可正常運作。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>百一電子 表單流程 UX 增強 · 使用手冊 v0.13.0（main）</span>
+    <span>完全瀏覽器端運作 · 不動伺服器 · 不碰密碼</span>
+  </div>
+</footer>
+</body>
+</html>
