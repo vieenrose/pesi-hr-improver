@@ -5,6 +5,8 @@
 原封不動地還原。同一套程式碼同時提供 **Tampermonkey 使用者腳本** 與 **Chrome／Firefox 擴充功能** 兩種形式。
 
 > 目前版本：**v0.13.0**
+>
+> 📖 完整操作說明請見 **[使用手冊（docs/USER_GUIDE.zh-TW.md）](docs/USER_GUIDE.zh-TW.md)**。
 
 ---
 
