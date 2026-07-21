@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "百一電子 表單流程 UX 增強 (PESI Workflow Enhancer)",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Modern, mobile-friendly enhancements for the legacy PESI 考勤表單流程 forms and the EIP 預約管理 module, a dashboard 考勤異常 batch handler with optional background desktop notifications, one-click shortcuts to 請假/公出出差/忘記打卡 forms plus today's 刷卡資料, an optional parallel Google Calendar event for 請假/公出/出差, and login username/company prefill (never the password). Drives the original fields underneath — no server changes.",
   "icons": {
     "48": "icons/icon48.png",

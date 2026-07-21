@@ -33,6 +33,30 @@
     e.dispatchEvent(new Event('input', { bubbles: true }));
     e.dispatchEvent(new Event('change', { bubbles: true }));
   }
+  /* Native 時段 options (請假 / 公出出差): tick 使用請假時段 + 彈性後時段 so the
+     hours the system computes match what the user actually works. The vendor
+     form gives these no stable id, so match on the visible label text. */
+  function boxFor(text) {
+    var els = [].slice.call(document.querySelectorAll('input[type=checkbox],input[type=radio]'));
+    for (var i = 0; i < els.length; i++) {
+      var lab = els[i].closest('label') ||
+        (els[i].id ? document.querySelector('label[for="' + els[i].id + '"]') : null) ||
+        els[i].parentNode;
+      if (lab && (lab.textContent || '').indexOf(text) >= 0) return els[i];
+    }
+    return null;
+  }
+  function tick(text) {
+    var e = boxFor(text);
+    if (!e || e.checked) return;
+    e.click();                                // let the form's own onclick run
+    if (!e.checked) {                         // fallback if the click was swallowed
+      e.checked = true;
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+  function useFlexLateShift() { tick('使用請假時段'); tick('彈性後時段'); }
+
   function ready(test, cb, tries) {
     tries = tries || 0;
     if (test()) return cb();
@@ -231,6 +255,7 @@
       setNative('from_time', g('hrx-ft').value);
       setNative('to_time', g('hrx-tt').value);
       setNative('reason', g('hrx-reason').value);
+      useFlexLateShift();
     }
     ['hrx-type', 'hrx-fd', 'hrx-ft', 'hrx-td', 'hrx-tt', 'hrx-reason'].forEach(function (id) {
       g(id).addEventListener('change', sync); g(id).addEventListener('input', sync);
@@ -340,6 +365,7 @@
       setNative('from_time', g('hrx-ft').value);
       setNative('to_time', g('hrx-tt').value);
       setNative('reason', g('hrx-reason').value);
+      useFlexLateShift();
     }
     ['hrx-type', 'hrx-fd', 'hrx-ft', 'hrx-td', 'hrx-tt', 'hrx-reason'].forEach(function (id) {
       g(id).addEventListener('change', sync); g(id).addEventListener('input', sync);
